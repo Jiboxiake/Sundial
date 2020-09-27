@@ -17,6 +17,7 @@ IndexHash::init(table_t * table, uint64_t bucket_cnt)
 {
     this->table = table;
     _bucket_cnt = bucket_cnt;
+    //printf("bucket count is %d \n",bucket_cnt);
     _buckets = new Bucket[_bucket_cnt];
     for (uint32_t n = 0; n < _bucket_cnt; n ++)
         _buckets[n].init();
