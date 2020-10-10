@@ -110,8 +110,8 @@ uint32_t        g_dummy_size            = 0;
 
 string ifconfig_string =
   "# a list of servers; each on a new line\n"
-"128.105.144.88\n"
-"128.105.144.84";
+"128.105.144.172\n"
+"128.105.144.195";
 
 
 string sync_port(":5104");
