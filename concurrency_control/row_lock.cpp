@@ -147,6 +147,7 @@ RC Row_lock::wait_die_check(LockEntry *entry, LockType type, bool need_latch)
                         return wait_die_check(entry, type, need_latch);
                     }
                 }
+
             }
         }
         //no special case, no conflict, can add to the locking set
@@ -169,7 +170,7 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
              // if(_locking_set.size()!=1){
             //printf("locking set size is %d \n",_locking_set.size());
            // assert(false);
-            }//
+           
            assert(_locking_set.size() == 1);
         }
     }
@@ -296,16 +297,6 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
 #endif
     if (need_latch)
         unlatch();
-    //unlatch();
-    // printf("grab return\n");
-    if (rc == ABORT)
-    {
-        //printf("txn aborted\n");
-    }
-    else
-    {
-        //printf("grab a lock\n");
-    }
 
     return rc;
 }
