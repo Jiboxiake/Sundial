@@ -40,11 +40,12 @@ protected:
         //pthread_mutex_t mutex;
         pthread_cond_t* cv;
     };
-    RC              wait_die_check(LockEntry* entry,LockType type, bool need_latch);
+    RC              wait_die_check(LockEntry* entry,LockType type, bool has_sh);
+    RC              wound_wait_check(LockEntry* entry,LockType type, bool has_sh, bool wait_flag);
     #define LOCK_MAN(txn) ((LockManager *) (txn)->get_cc_manager())
     // only store timestamp which uniquely identifies a txn.
     // for NO_WAIT, store the txn_id
-#if CC_ALG == WAIT_DIE
+#if CC_ALG == WAIT_DIE ||CC_ALG==WOUND_WAIT
     struct Compare {
         bool operator() (const LockEntry &en1, const LockEntry &en2) const;
     };

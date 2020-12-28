@@ -19,9 +19,10 @@
 #include <grpcpp/impl/codegen/server_context.h>
 #include <grpcpp/impl/codegen/service_type.h>
 #include <grpcpp/impl/codegen/sync_stream.h>
+namespace sundial_rpc {
 
 static const char* SundialRPC_method_names[] = {
-  "/SundialRPC/contactRemote",
+  "/sundial_rpc.SundialRPC/contactRemote",
 };
 
 std::unique_ptr< SundialRPC::Stub> SundialRPC::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -34,43 +35,43 @@ SundialRPC::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel
   : channel_(channel), rpcmethod_contactRemote_(SundialRPC_method_names[0], ::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
-::grpc::Status SundialRPC::Stub::contactRemote(::grpc::ClientContext* context, const ::SundialRequest& request, ::SundialResponse* response) {
+::grpc::Status SundialRPC::Stub::contactRemote(::grpc::ClientContext* context, const ::sundial_rpc::SundialRequest& request, ::sundial_rpc::SundialResponse* response) {
   return ::grpc::internal::BlockingUnaryCall(channel_.get(), rpcmethod_contactRemote_, context, request, response);
 }
 
-void SundialRPC::Stub::experimental_async::contactRemote(::grpc::ClientContext* context, const ::SundialRequest* request, ::SundialResponse* response, std::function<void(::grpc::Status)> f) {
+void SundialRPC::Stub::experimental_async::contactRemote(::grpc::ClientContext* context, const ::sundial_rpc::SundialRequest* request, ::sundial_rpc::SundialResponse* response, std::function<void(::grpc::Status)> f) {
   ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_contactRemote_, context, request, response, std::move(f));
 }
 
-void SundialRPC::Stub::experimental_async::contactRemote(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::SundialResponse* response, std::function<void(::grpc::Status)> f) {
+void SundialRPC::Stub::experimental_async::contactRemote(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::sundial_rpc::SundialResponse* response, std::function<void(::grpc::Status)> f) {
   ::grpc_impl::internal::CallbackUnaryCall(stub_->channel_.get(), stub_->rpcmethod_contactRemote_, context, request, response, std::move(f));
 }
 
-void SundialRPC::Stub::experimental_async::contactRemote(::grpc::ClientContext* context, const ::SundialRequest* request, ::SundialResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+void SundialRPC::Stub::experimental_async::contactRemote(::grpc::ClientContext* context, const ::sundial_rpc::SundialRequest* request, ::sundial_rpc::SundialResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
   ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_contactRemote_, context, request, response, reactor);
 }
 
-void SundialRPC::Stub::experimental_async::contactRemote(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::SundialResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
+void SundialRPC::Stub::experimental_async::contactRemote(::grpc::ClientContext* context, const ::grpc::ByteBuffer* request, ::sundial_rpc::SundialResponse* response, ::grpc::experimental::ClientUnaryReactor* reactor) {
   ::grpc_impl::internal::ClientCallbackUnaryFactory::Create(stub_->channel_.get(), stub_->rpcmethod_contactRemote_, context, request, response, reactor);
 }
 
-::grpc::ClientAsyncResponseReader< ::SundialResponse>* SundialRPC::Stub::AsynccontactRemoteRaw(::grpc::ClientContext* context, const ::SundialRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::SundialResponse>::Create(channel_.get(), cq, rpcmethod_contactRemote_, context, request, true);
+::grpc::ClientAsyncResponseReader< ::sundial_rpc::SundialResponse>* SundialRPC::Stub::AsynccontactRemoteRaw(::grpc::ClientContext* context, const ::sundial_rpc::SundialRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::sundial_rpc::SundialResponse>::Create(channel_.get(), cq, rpcmethod_contactRemote_, context, request, true);
 }
 
-::grpc::ClientAsyncResponseReader< ::SundialResponse>* SundialRPC::Stub::PrepareAsynccontactRemoteRaw(::grpc::ClientContext* context, const ::SundialRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::SundialResponse>::Create(channel_.get(), cq, rpcmethod_contactRemote_, context, request, false);
+::grpc::ClientAsyncResponseReader< ::sundial_rpc::SundialResponse>* SundialRPC::Stub::PrepareAsynccontactRemoteRaw(::grpc::ClientContext* context, const ::sundial_rpc::SundialRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc_impl::internal::ClientAsyncResponseReaderFactory< ::sundial_rpc::SundialResponse>::Create(channel_.get(), cq, rpcmethod_contactRemote_, context, request, false);
 }
 
 SundialRPC::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       SundialRPC_method_names[0],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
-      new ::grpc::internal::RpcMethodHandler< SundialRPC::Service, ::SundialRequest, ::SundialResponse>(
+      new ::grpc::internal::RpcMethodHandler< SundialRPC::Service, ::sundial_rpc::SundialRequest, ::sundial_rpc::SundialResponse>(
           [](SundialRPC::Service* service,
              ::grpc_impl::ServerContext* ctx,
-             const ::SundialRequest* req,
-             ::SundialResponse* resp) {
+             const ::sundial_rpc::SundialRequest* req,
+             ::sundial_rpc::SundialResponse* resp) {
                return service->contactRemote(ctx, req, resp);
              }, this)));
 }
@@ -78,11 +79,13 @@ SundialRPC::Service::Service() {
 SundialRPC::Service::~Service() {
 }
 
-::grpc::Status SundialRPC::Service::contactRemote(::grpc::ServerContext* context, const ::SundialRequest* request, ::SundialResponse* response) {
+::grpc::Status SundialRPC::Service::contactRemote(::grpc::ServerContext* context, const ::sundial_rpc::SundialRequest* request, ::sundial_rpc::SundialResponse* response) {
   (void) context;
   (void) request;
   (void) response;
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
+
+}  // namespace sundial_rpc
 

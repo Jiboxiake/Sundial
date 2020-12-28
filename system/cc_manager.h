@@ -21,7 +21,7 @@ public:
     virtual ~CCManager() {};
 
     virtual void      init();
-    #if CC_ALG == WAIT_DIE
+    #if CC_ALG == WAIT_DIE ||CC_ALG==WOUND_WAIT
     uint64_t get_ts();
     #endif
     // For algorithms other than TicToc, we don't care whether the txn is readonly or not.

@@ -12,7 +12,7 @@
 
 #if WORKLOAD == TPCC
 
-TPCCStoreProcedure::TPCCStoreProcedure(TxnManager * txn_man, QueryBase * query)
+TPCCStoreProcedure::TPCCStoreProcedure(TxnManager *txn_man, QueryBase *query)
     : StoreProcedure(txn_man, query)
 {
     init();
@@ -22,8 +22,7 @@ TPCCStoreProcedure::~TPCCStoreProcedure()
 {
 }
 
-void
-TPCCStoreProcedure::init()
+void TPCCStoreProcedure::init()
 {
     StoreProcedure::init();
     _curr_ol_number = 0;
@@ -39,32 +38,48 @@ TPCCStoreProcedure::get_txn_type()
     return ((QueryTPCC *)_query)->type;
 }
 
-RC
-TPCCStoreProcedure::execute()
+RC TPCCStoreProcedure::execute()
 {
-    QueryTPCC * query = (QueryTPCC *) _query;
+    QueryTPCC *query = (QueryTPCC *)_query;
     //assert(!_txn->is_sub_txn());
-    switch (query->type) {
-        case TPCC_PAYMENT:          { return execute_payment(); }
-        case TPCC_NEW_ORDER:        { return execute_new_order(); }
-        case TPCC_ORDER_STATUS:     { return execute_order_status(); }
-        case TPCC_DELIVERY:         { return execute_delivery(); }
-        case TPCC_STOCK_LEVEL:      { return execute_stock_level(); }
-        default:                    assert(false); return RCOK;
+    switch (query->type)
+    {
+    case TPCC_PAYMENT:
+    {
+        return execute_payment();
+    }
+    case TPCC_NEW_ORDER:
+    {
+        return execute_new_order();
+    }
+    case TPCC_ORDER_STATUS:
+    {
+        return execute_order_status();
+    }
+    case TPCC_DELIVERY:
+    {
+        return execute_delivery();
+    }
+    case TPCC_STOCK_LEVEL:
+    {
+        return execute_stock_level();
+    }
+    default:
+        assert(false);
+        return RCOK;
     }
 }
 
 // TODO. need to support waiting for locks.
-RC
-TPCCStoreProcedure::execute_payment()
+RC TPCCStoreProcedure::execute_payment()
 {
-    QueryPaymentTPCC * query = (QueryPaymentTPCC *) _query;
-    WorkloadTPCC * wl = (WorkloadTPCC *) GET_WORKLOAD;
+    QueryPaymentTPCC *query = (QueryPaymentTPCC *)_query;
+    WorkloadTPCC *wl = (WorkloadTPCC *)GET_WORKLOAD;
 
     RC rc = RCOK;
     uint64_t key;
-    Catalog * schema;
-    INDEX * index;
+    Catalog *schema;
+    INDEX *index;
 
     uint64_t c_w_id = query->c_w_id;
 
@@ -119,17 +134,20 @@ TPCCStoreProcedure::execute_payment()
     // Step 3: access CUSTOMER
     // =======================
     uint32_t node_id = TPCCHelper::wh_to_node(c_w_id);
-    key = (query->by_last_name)?
-        custNPKey(query->c_last, query->c_d_id, query->c_w_id)
-        : custKey(query->c_w_id, query->c_d_id, query->c_id);
-    index = query->by_last_name? wl->i_customer_last : wl->i_customer_id;
+    key = (query->by_last_name) ? custNPKey(query->c_last, query->c_d_id, query->c_w_id)
+                                : custKey(query->c_w_id, query->c_d_id, query->c_id);
+    index = query->by_last_name ? wl->i_customer_last : wl->i_customer_id;
     schema = wl->t_customer->get_schema();
-    if (node_id == g_node_id) {
+    if (node_id == g_node_id)
+    {
         GET_DATA(key, index, WR);
-    } else {
-        uint32_t index_id = (query->by_last_name)? IDX_CUSTOMER_LAST : IDX_CUSTOMER_ID;
+    }
+    else
+    {
+        uint32_t index_id = (query->by_last_name) ? IDX_CUSTOMER_LAST : IDX_CUSTOMER_ID;
         rc = _txn->send_remote_read_request(node_id, key, index_id, TAB_CUSTOMER, WR);
-        if (rc == ABORT) return rc;
+        if (rc == ABORT)
+            return rc;
     }
 
     _curr_data = get_cc_manager()->get_data(key, TAB_CUSTOMER);
@@ -162,23 +180,22 @@ TPCCStoreProcedure::execute_payment()
     return COMMIT;
 }
 
-RC
-TPCCStoreProcedure::execute_new_order()
+RC TPCCStoreProcedure::execute_new_order()
 {
     RC rc = RCOK;
     uint64_t key;
     //itemid_t * item;
-    Catalog * schema = NULL;
-    char * _curr_data;
+    Catalog *schema = NULL;
+    char *_curr_data;
 
-    QueryNewOrderTPCC * query = (QueryNewOrderTPCC *) _query;
-    WorkloadTPCC * wl = (WorkloadTPCC *) GET_WORKLOAD;
+    QueryNewOrderTPCC *query = (QueryNewOrderTPCC *)_query;
+    WorkloadTPCC *wl = (WorkloadTPCC *)GET_WORKLOAD;
 
     uint64_t w_id = query->w_id;
     uint64_t d_id = query->d_id;
     uint64_t c_id = query->c_id;
     uint64_t ol_cnt = query->ol_cnt;
-    Item_no * items = query->items;
+    Item_no *items = query->items;
 
     // Step 1: access WAREHOUSE
     // ========================
@@ -216,8 +233,9 @@ TPCCStoreProcedure::execute_new_order()
     LOAD_VALUE(double, d_tax, schema, _curr_data, D_TAX);
     _d_tax = d_tax;
     LOAD_VALUE(int64_t, o_id, schema, _curr_data, D_NEXT_O_ID);
-    _o_id = o_id;;
-    o_id ++;
+    _o_id = o_id;
+    ;
+    o_id++;
     STORE_VALUE(o_id, schema, _curr_data, D_NEXT_O_ID);
 
     // Step 4: insert to ORDER
@@ -227,7 +245,7 @@ TPCCStoreProcedure::execute_new_order()
     key = orderKey(w_id, d_id, _o_id);
     schema = wl->t_order->get_schema();
 
-    row_t * row = new row_t(wl->t_order);
+    row_t *row = new row_t(wl->t_order);
 
     row->set_value(O_ID, &_o_id);
     row->set_value(O_C_ID, &c_id);
@@ -235,7 +253,7 @@ TPCCStoreProcedure::execute_new_order()
     row->set_value(O_W_ID, &w_id);
     row->set_value(O_ENTRY_D, &query->o_entry_d);
     row->set_value(O_OL_CNT, &ol_cnt);
-    int64_t all_local = (query->remote? 0 : 1);
+    int64_t all_local = (query->remote ? 0 : 1);
     row->set_value(O_ALL_LOCAL, &all_local);
     rc = get_cc_manager()->row_insert(wl->t_order, row);
     if (rc != RCOK)
@@ -248,7 +266,7 @@ TPCCStoreProcedure::execute_new_order()
     key = neworderKey(w_id, d_id);
     schema = wl->t_neworder->get_schema();
 
-    row = new row_t (wl->t_neworder);
+    row = new row_t(wl->t_neworder);
     row->set_value(NO_O_ID, &_o_id);
     row->set_value(NO_D_ID, &d_id);
     row->set_value(NO_W_ID, &w_id);
@@ -262,17 +280,30 @@ TPCCStoreProcedure::execute_new_order()
     //    INTO :i_price, :i_name, :i_data
     //    FROM item
     //    WHERE i_id = :ol_i_id;
-    for (_curr_ol_number = 0; _curr_ol_number < ol_cnt; _curr_ol_number ++) {
+    for (_curr_ol_number = 0; _curr_ol_number < ol_cnt; _curr_ol_number++)
+    {
         key = items[_curr_ol_number].ol_i_id;
         schema = wl->t_item->get_schema();
 
-        set<row_t *> * rows = NULL;
+        set<row_t *> *rows = NULL;
         rc = get_cc_manager()->index_read(wl->i_item, key, rows);
-        assert(rc == RCOK);
-        if (rc == RCOK && !rows) {
+        //May not need this assert as index read may return abort on wound_wait
+        if(CC_ALG!=WOUND_WAIT){
+            assert(rc == RCOK);
+        }
+        //we want to abort if rc==abort, TODO:make sure should I set self_abort to true?
+        if (rc == RCOK && !rows)
+        {
             _self_abort = true;
             return ABORT;
         }
+        else if (rc==ABORT){
+            return ABORT;
+        }
+        {
+            /* code */
+        }
+        
         _curr_row = *rows->begin();
         rc = get_cc_manager()->get_row(_curr_row, RD, _curr_data, key);
 
@@ -283,23 +314,28 @@ TPCCStoreProcedure::execute_new_order()
     }
     // Step 7: access STOCK
     // ====================
-    for (_curr_ol_number = 0; _curr_ol_number < ol_cnt; _curr_ol_number ++) {
-        Item_no * it = &items[_curr_ol_number];
+    for (_curr_ol_number = 0; _curr_ol_number < ol_cnt; _curr_ol_number++)
+    {
+        Item_no *it = &items[_curr_ol_number];
         key = stockKey(it->ol_supply_w_id, it->ol_i_id);
 
         // TODO. if any access is remote, the current thread blocks until
         // the response come back. This can be implemented using asynchronous
         // RPC. E.g., make multiple RPC calls and then wait for them one by one.
         schema = wl->t_stock->get_schema();
-        uint32_t node_id = TPCCHelper::wh_to_node( it->ol_supply_w_id);
-        if (node_id == g_node_id) {
+        uint32_t node_id = TPCCHelper::wh_to_node(it->ol_supply_w_id);
+        if (node_id == g_node_id)
+        {
             GET_DATA(key, wl->i_stock, WR);
-        } else {
+        }
+        else
+        {
             rc = _txn->send_remote_read_request(node_id, key, IDX_STOCK, TAB_STOCK, WR);
-            if (rc == ABORT) return rc;
+            if (rc == ABORT)
+                return rc;
         }
 
-        char * _curr_data = get_cc_manager()->get_data(key, TAB_STOCK);
+        char *_curr_data = get_cc_manager()->get_data(key, TAB_STOCK);
 
         LOAD_VALUE(uint64_t, s_quantity, schema, _curr_data, S_QUANTITY);
         if (s_quantity > it->ol_quantity + 10)
@@ -314,27 +350,29 @@ TPCCStoreProcedure::execute_new_order()
         STORE_VALUE(s_ytd, schema, _curr_data, S_YTD);
 
         LOAD_VALUE(int64_t, s_order_cnt, schema, _curr_data, S_ORDER_CNT);
-        s_order_cnt ++;
+        s_order_cnt++;
         STORE_VALUE(s_order_cnt, schema, _curr_data, S_ORDER_CNT);
 
         __attribute__((unused)) LOAD_VALUE(char *, s_data, schema, _curr_data, S_DATA);
 
-        if (it->ol_supply_w_id != w_id) {
+        if (it->ol_supply_w_id != w_id)
+        {
             LOAD_VALUE(int64_t, s_remote_cnt, schema, _curr_data, S_REMOTE_CNT);
-            s_remote_cnt ++;
+            s_remote_cnt++;
             STORE_VALUE(s_remote_cnt, schema, _curr_data, S_REMOTE_CNT);
         }
     }
     // Step 8: insert into ORDERLINE
     // =============================
     key = orderlineKey(w_id, d_id, _o_id);
-    for (_ol_num = 0; _ol_num < (int64_t)ol_cnt; _ol_num ++) {
-        Item_no * it = &items[_ol_num];
+    for (_ol_num = 0; _ol_num < (int64_t)ol_cnt; _ol_num++)
+    {
+        Item_no *it = &items[_ol_num];
         // all rows (local or remote) are inserted locally.
         double ol_amount = it->ol_quantity * _i_price[_ol_num] * (1 + _w_tax + _d_tax) * (1 - _c_discount);
         schema = wl->t_orderline->get_schema();
 
-        row_t * row = new row_t(wl->t_orderline);
+        row_t *row = new row_t(wl->t_orderline);
         row->set_value(OL_O_ID, &_o_id);
         row->set_value(OL_D_ID, &d_id);
         row->set_value(OL_W_ID, &w_id);
@@ -345,38 +383,40 @@ TPCCStoreProcedure::execute_new_order()
         row->set_value(OL_AMOUNT, &ol_amount);
 
         rc = get_cc_manager()->row_insert(wl->t_orderline, row);
-        _ol_num ++;
-        if (rc != RCOK) return rc;
+        _ol_num++;
+        if (rc != RCOK)
+            return rc;
     }
     return COMMIT;
 }
 
 // TODO. this is a read-only transaction. With multi-version storage, the logic
 // can be simplified.
-RC
-TPCCStoreProcedure::execute_order_status()
+RC TPCCStoreProcedure::execute_order_status()
 {
     RC rc = RCOK;
-    QueryOrderStatusTPCC * query = (QueryOrderStatusTPCC *) _query;
-    WorkloadTPCC * wl = (WorkloadTPCC *) GET_WORKLOAD;
+    QueryOrderStatusTPCC *query = (QueryOrderStatusTPCC *)_query;
+    WorkloadTPCC *wl = (WorkloadTPCC *)GET_WORKLOAD;
 
     uint64_t key;
-    Catalog * schema;
-    INDEX * index;
+    Catalog *schema;
+    INDEX *index;
 
     // Step 1: access CUSTOMER
     // =======================
-    key = (query->by_last_name)?
-        custNPKey(query->c_last, query->d_id, query->w_id)
-        : custKey(query->w_id, query->d_id, query->c_id);
-    index = query->by_last_name? wl->i_customer_last : wl->i_customer_id;
+    key = (query->by_last_name) ? custNPKey(query->c_last, query->d_id, query->w_id)
+                                : custKey(query->w_id, query->d_id, query->c_id);
+    index = query->by_last_name ? wl->i_customer_last : wl->i_customer_id;
     schema = wl->t_customer->get_schema();
 
     GET_DATA(key, index, RD);
-    if (query->by_last_name) {
+    if (query->by_last_name)
+    {
         LOAD_VALUE(int64_t, c_id, schema, _curr_data, C_ID);
         _c_id = c_id;
-    } else {
+    }
+    else
+    {
         _c_id = query->c_id;
         __attribute__((unused)) LOAD_VALUE(double, c_balance, schema, _curr_data, C_BALANCE);
         __attribute__((unused)) LOAD_VALUE(char *, c_first, schema, _curr_data, C_FIRST);
@@ -404,14 +444,20 @@ TPCCStoreProcedure::execute_order_status()
     index = wl->i_orderline;
     schema = wl->t_orderline->get_schema();
 
-    set<row_t *> * rows = NULL;
+    set<row_t *> *rows = NULL;
     rc = get_cc_manager()->index_read(index, key, rows);
-    if (rc != RCOK) return rc;
+    if (rc != RCOK)
+        return rc;
     assert(rows->size() <= 15 && rows->size() >= 5);
-    for (set<row_t *>::iterator it = rows->begin(); it != rows->end(); it ++) {
+    for (set<row_t *>::iterator it = rows->begin(); it != rows->end(); it++)
+    {
         _curr_row = *it;
         rc = get_cc_manager()->get_row(_curr_row, RD, _curr_data, key);
+        if(CC_ALG!=WOUND_WAIT)
         assert(rc == RCOK);
+        if(rc!=RCOK){
+            return rc;
+        }
         __attribute__((unused)) LOAD_VALUE(int64_t, ol_i_id, schema, _curr_data, OL_I_ID);
         __attribute__((unused)) LOAD_VALUE(int64_t, ol_supply_w_id, schema, _curr_data, OL_SUPPLY_W_ID);
         __attribute__((unused)) LOAD_VALUE(int64_t, ol_quantity, schema, _curr_data, OL_QUANTITY);
@@ -421,17 +467,15 @@ TPCCStoreProcedure::execute_order_status()
     return COMMIT;
 }
 
-
-RC
-TPCCStoreProcedure::execute_delivery()
+RC TPCCStoreProcedure::execute_delivery()
 {
     RC rc = RCOK;
-    QueryDeliveryTPCC * query = (QueryDeliveryTPCC *) _query;
-    WorkloadTPCC * wl = (WorkloadTPCC *) GET_WORKLOAD;
+    QueryDeliveryTPCC *query = (QueryDeliveryTPCC *)_query;
+    WorkloadTPCC *wl = (WorkloadTPCC *)GET_WORKLOAD;
 
     uint64_t key;
-    Catalog * schema;
-    INDEX * index;
+    Catalog *schema;
+    INDEX *index;
 
     _curr_dist = query->d_id;
     // Step 1: Delete from NEWORDER
@@ -440,23 +484,29 @@ TPCCStoreProcedure::execute_delivery()
     key = neworderKey(query->w_id, _curr_dist);
     index = wl->i_neworder;
     schema = wl->t_neworder->get_schema();
-    set<row_t *> * rows = NULL;
+    set<row_t *> *rows = NULL;
     // TODO. should pick the row with the lower NO_O_ID. need to do a scan here.
     // However, HSTORE just pick one row using LIMIT 1. So we also just pick a row.
     rc = get_cc_manager()->index_read(index, key, rows, 1);
-    if (rc != RCOK) return rc;
+    if (rc != RCOK)
+        return rc;
     if (!rows)
         return COMMIT;
     _curr_row = *rows->begin();
 
     rc = get_cc_manager()->get_row(_curr_row, RD, _curr_data, key);
-    assert(rc == RCOK);
+    if(CC_ALG!=WOUND_WAIT)
+            assert(rc == RCOK);
+    if(rc!=RCOK){
+        return rc;
+    }    
 
     LOAD_VALUE(int64_t, o_id, schema, _curr_data, NO_O_ID);
     _o_id = o_id;
-    rc = get_cc_manager()->row_delete( _curr_row );
-    if (rc != RCOK) return rc;
-
+    rc = get_cc_manager()->row_delete(_curr_row);
+    if (rc != RCOK)
+        return rc;
+    //printf("successful delete\n");
     // Step 2: access ORDER
     // ====================
     //cout << "step 2" << endl;
@@ -476,16 +526,22 @@ TPCCStoreProcedure::execute_delivery()
     schema = wl->t_orderline->get_schema();
     rows = NULL;
     rc = get_cc_manager()->index_read(index, key, rows);
-    if (rc != RCOK) return rc;
+    if (rc != RCOK)
+        return rc;
     // TODO: how can rows be NULL? The order is found but there are no
     // orderline?
     assert(rows);
     //if (rows == NULL)
     //    return ABORT;
-    for (set<row_t *>::iterator it = rows->begin(); it != rows->end(); it ++) {
+    for (set<row_t *>::iterator it = rows->begin(); it != rows->end(); it++)
+    {
         _curr_row = *it;
         rc = get_cc_manager()->get_row(_curr_row, RD, _curr_data, key);
-        assert(rc == RCOK);
+        if(CC_ALG!=WOUND_WAIT)
+            assert(rc == RCOK);
+        if(rc!=RCOK){
+            return rc;
+        }
         LOAD_VALUE(double, ol_amount, schema, _curr_data, OL_AMOUNT);
         _ol_amount += ol_amount;
     }
@@ -504,21 +560,20 @@ TPCCStoreProcedure::execute_delivery()
     STORE_VALUE(c_balance, schema, _curr_data, C_BALANCE);
 
     LOAD_VALUE(int64_t, c_delivery_cnt, schema, _curr_data, C_DELIVERY_CNT);
-    c_delivery_cnt ++;
+    c_delivery_cnt++;
     STORE_VALUE(c_delivery_cnt, schema, _curr_data, C_DELIVERY_CNT);
     return COMMIT;
 }
 
-RC
-TPCCStoreProcedure::execute_stock_level()
+RC TPCCStoreProcedure::execute_stock_level()
 {
     RC rc = RCOK;
-    QueryStockLevelTPCC * query = (QueryStockLevelTPCC *) _query;
-    WorkloadTPCC * wl = (WorkloadTPCC *) GET_WORKLOAD;
+    QueryStockLevelTPCC *query = (QueryStockLevelTPCC *)_query;
+    WorkloadTPCC *wl = (WorkloadTPCC *)GET_WORKLOAD;
 
     uint64_t key;
-    Catalog * schema;
-    INDEX * index;
+    Catalog *schema;
+    INDEX *index;
 
     // Step 1: Read DISTRICT
     // =====================
@@ -533,23 +588,30 @@ TPCCStoreProcedure::execute_stock_level()
 
     // Step 2: Read ORDERLINE
     // ======================
-    for (; _curr_ol_number < _o_id; _curr_ol_number ++) {
+    for (; _curr_ol_number < _o_id; _curr_ol_number++)
+    {
         key = orderlineKey(query->w_id, query->d_id, _curr_ol_number);
         index = wl->i_orderline;
         schema = wl->t_orderline->get_schema();
 
-        set<row_t *> * rows = NULL;
+        set<row_t *> *rows = NULL;
         rc = get_cc_manager()->index_read(index, key, rows);
-        if (rc != RCOK) return rc;
+        if (rc != RCOK)
+            return rc;
         // Again, how can rows be NULL?
         assert(rows);
         if (!rows)
             continue;
 
-        for (set<row_t *>::iterator it = rows->begin(); it != rows->end(); it ++) {
+        for (set<row_t *>::iterator it = rows->begin(); it != rows->end(); it++)
+        {
             _curr_row = *it;
             rc = get_cc_manager()->get_row(_curr_row, RD, _curr_data, key);
-            assert(rc == RCOK);
+            if(CC_ALG!=WOUND_WAIT)
+                assert(rc == RCOK);
+            if(rc!=RCOK){
+                return rc;
+            }
             LOAD_VALUE(int64_t, i_id, schema, _curr_data, OL_I_ID);
             _items.insert(i_id);
         }
@@ -557,7 +619,8 @@ TPCCStoreProcedure::execute_stock_level()
 
     // Step 3: Read STOCK
     // ==================
-    for (_item_iter = _items.begin(); _item_iter != _items.end(); _item_iter ++) {
+    for (_item_iter = _items.begin(); _item_iter != _items.end(); _item_iter++)
+    {
         key = stockKey(query->w_id, *_item_iter);
         index = wl->i_stock;
         schema = wl->t_stock->get_schema();
@@ -568,8 +631,7 @@ TPCCStoreProcedure::execute_stock_level()
     return COMMIT;
 }
 
-void
-TPCCStoreProcedure::txn_abort()
+void TPCCStoreProcedure::txn_abort()
 {
     _curr_ol_number = 0;
 

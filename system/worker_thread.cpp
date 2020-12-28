@@ -98,16 +98,18 @@ RC WorkerThread::run() {
             // INC_INT_STATS(num_aborts_terminate, 1);
             //if (_native_txn->get_txn_state() == TxnManager::COMMITTED)
             //    _num_complete_txns ++;
+#if ENABLE_ADMISSION_CONTROL
             if (_native_txn->get_txn_state() == TxnManager::COMMITTED)
                 add_to_pool();
+#endif
             txn_table->remove_txn(_native_txn);
             delete _native_txn;
             _native_txn = NULL;
         } else { // should restart
+            //printf("restarting\n");
             assert( _native_txn->get_txn_state() == TxnManager::ABORTED);
             uint64_t sleep_time = g_abort_penalty * glob_manager->rand_double(); // in nanoseconds
             usleep(sleep_time / 1000);
-           // printf("after sleep\n");
         }
     }
     glob_manager->worker_thread_done();
@@ -125,6 +127,7 @@ WorkerThread::wakeup() {
     pthread_mutex_lock(_mutex);
     assert( _is_ready == false );
     _is_ready = true;
+    printf("thread-%lu wakeup and set to true\n", get_thd_id());
     pthread_mutex_unlock(_mutex);
     pthread_cond_signal(_cond);
 }
@@ -133,9 +136,12 @@ WorkerThread::wakeup() {
 void
 WorkerThread::add_to_pool() {
     assert(_is_ready);
+    printf("thread-%lu set to false, wait to be added to pool\n", get_thd_id());
     _is_ready = false;
-    if ( glob_manager->add_to_thread_pool( this ) )
+    if ( glob_manager->add_to_thread_pool( this ) ) {
         _is_ready = true;
+        printf("thread-%lu set to true\n", get_thd_id());
+    }
 }
 
 

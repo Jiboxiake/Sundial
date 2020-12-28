@@ -9,8 +9,8 @@
 
 // only a limited number of active threads are allowed. This configuration is
 // effective only when LOG_ENABLE == true.
-#define ENABLE_ADMISSION_CONTROL        false
-#define MAX_NUM_ACTIVE_TXNS             32
+#define ENABLE_ADMISSION_CONTROL        true
+#define MAX_NUM_ACTIVE_TXNS             16
 
 // WORKLOAD can be YCSB or TPCC
 #define WORKLOAD                        TPCC
@@ -26,7 +26,7 @@
 // Concurrency Control
 // ===================
 // Supported concurrency control algorithms: WAIT_DIE, NO_WAIT, TICTOC, F_ONE
-#define CC_ALG                          WOUND_WAIT
+#define CC_ALG                          NO_WAIT
 
 #define ABORT_PENALTY                   10000000  // in nanoseconds
 
@@ -89,8 +89,8 @@
 
 // Logging
 // =======
-#define LOG_ENABLE                      false
-#define CONTROLLED_LOCK_VIOLATION       false
+#define LOG_ENABLE                      true
+#define CONTROLLED_LOCK_VIOLATION       true
 
 // Benchmark
 // =========
@@ -176,7 +176,6 @@
 #define NAIVE_TICTOC                    6
 #define TICTOC                          7
 #define TCM                             8
-#define WOUND_WAIT                      9
 // TIMESTAMP allocation method.
 #define TS_MUTEX                        1
 #define TS_CAS                          2

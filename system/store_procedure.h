@@ -1,5 +1,6 @@
 #pragma once
 #include "global.h"
+#include "packetize.h"
 
 class QueryBase;
 class CCManager;
@@ -32,7 +33,7 @@ public:
 
     access_t _local_miss_type;
     uint64_t _local_miss_key;
-    //map<uint32_t, UnstructuredBuffer> remote_requests;
+    map<uint32_t, UnstructuredBuffer> remote_requests;
     //bool is_single_partition() { return _is_single_partition; }
 protected:
 #define LOAD_VALUE(type, var, schema, data, col) \

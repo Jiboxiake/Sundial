@@ -4,11 +4,9 @@
 #include "helper.h"
 
 //#include "rpc_server.h"
-//#include "rpc_client.h"
+#include "rpc_client.h"
 #include "semaphore_sync.h"
-#include "sundial_grpc.grpc.pb.h"
-#include "sundial_grpc.pb.h"
-//#include "worker_thread.h"
+
 class workload;
 //class WorkerThread;
 class row_t;
@@ -18,7 +16,7 @@ class SubQuery;
 class Message;
 class StoreProcedure;
 class CCManager;
-using grpc::CompletionQueue;
+
 class TxnManager
 {
 public:
@@ -33,19 +31,23 @@ public:
     TxnManager() : TxnManager(NULL, NULL) {};
     TxnManager(QueryBase * query, WorkerThread * thread);
     virtual ~TxnManager();
-
+    bool killed;
     // start to run transactions
     RC start();
 
     // rerun previously aborted transactions
     RC restart();
+    #if CC_ALG==WOUND_WAIT
+    uint64_t wound();
+    uint64_t recover();
+    #endif
 
     void              set_txn_id(uint64_t txn_id) { _txn_id = txn_id; }
     uint64_t          get_txn_id()          { return _txn_id; }
     bool              is_read_only()        { return _is_read_only; }
     void              set_read_only(bool readonly) { _is_read_only = readonly; }
-    bool              is_single_partition() { return _is_single_partition; }
-
+    bool              is_single_partition() { return _is_single_partition; } 
+    bool              is_killed()           {return killed;}
     CCManager *       get_cc_manager()      { return _cc_manager; }
     StoreProcedure *  get_store_procedure() { return _store_procedure; };
     State             get_txn_state()       { return _txn_state; }
@@ -67,8 +69,8 @@ public:
     void set_sub_txn(bool is_sub_txn)     { _is_sub_txn = is_sub_txn; }
     bool is_sub_txn()                     { return _is_sub_txn; }
 private:
-    RC process_2pc_phase1(CompletionQueue* cq);
-    RC process_2pc_phase2(RC rc, CompletionQueue* cq);
+    RC process_2pc_phase1();
+    RC process_2pc_phase2(RC rc);
 
 public:
     // Stats

@@ -86,7 +86,7 @@ CCManager::commit_insdel()
 }
 
 
-#if CC_ALG == WAIT_DIE
+#if CC_ALG == WAIT_DIE ||CC_ALG==WOUND_WAIT
 uint64_t CCManager::get_ts(){
     return _timestamp;
 }

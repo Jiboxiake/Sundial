@@ -23,16 +23,9 @@
 #include <math.h>
 #include <boost/lockfree/queue.hpp>
 #include "pthread.h"
-//#include "rpc_client.h"
-//#include "rpc_server.h"
+
 #include "config.h"
 #include "stats.h"
-//#include "sundial_grpc.grpc.pb.h"
-//#include "sundial_grpc.pb.h"
-#include "grpc_async_server.h"
-#include "grpc_sync_server.h"
-#include "grpc_async_client.h"
-#include "grpc_sync_client.h"
 
 using std::cout;
 using std::endl;
@@ -53,12 +46,8 @@ class CacheManager;
 class IndexHash;
 class WorkerThread;
 class LogManager;
-//class SundialRPCClient;
-//class SundialRPCServerImpl;
-class Sundial_Async_Client;
-class SundialAsyncServiceImp;
-class SundialServiceImp;
-class Sundial_Sync_Client;
+class SundialRPCClient;
+class SundialRPCServerImpl;
 
 typedef uint64_t ts_t; // time stamp type
 
@@ -154,7 +143,7 @@ using global_key_t = std::pair<uint32_t, uint64_t>;
 #define INDEX        IndexHash
 #endif
 
-#if CC_ALG == WAIT_DIE || CC_ALG == NO_WAIT
+#if CC_ALG == WAIT_DIE || CC_ALG == NO_WAIT||CC_ALG==WOUND_WAIT
     class Row_lock;
     class LockManager;
     #define ROW_MAN Row_lock
@@ -205,14 +194,8 @@ extern uint32_t         g_node_id;
 extern uint32_t         g_num_input_threads;
 extern uint32_t         g_num_output_threads;
 
-//extern SundialRPCClient * rpc_client;
-//extern SundialRPCServerImpl * rpc_server;
-extern Sundial_Async_Client* grpc_async_client;
-extern SundialAsyncServiceImp* grpc_async_server;
-extern SundialServiceImp* grpc_sync_server;
-extern Sundial_Sync_Client* grpc_sync_client;
-extern string sync_port;
-extern string async_port;
+extern SundialRPCClient * rpc_client;
+extern SundialRPCServerImpl * rpc_server;
 
 extern Transport *      transport;
 typedef boost::lockfree::queue<uint64_t, boost::lockfree::capacity<INOUT_QUEUE_SIZE>> InOutQueue;

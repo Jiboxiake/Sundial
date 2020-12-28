@@ -12,13 +12,13 @@
 #include "txn_table.h"
 #include "packetize.h"
 
-#if CC_ALG == WAIT_DIE || CC_ALG == NO_WAIT
+#if CC_ALG == WAIT_DIE || CC_ALG == NO_WAIT ||CC_ALG==WOUND_WAIT
 
 LockManager::LockManager(TxnManager * txn)
     : CCManager(txn)
 {
     _num_lock_waits = 0;
-#if CC_ALG == WAIT_DIE
+#if CC_ALG == WAIT_DIE ||CC_ALG==WOUND_WAIT
     assert(g_ts_alloc == TS_CLOCK);
     _timestamp = glob_manager->get_ts(GET_THD_ID);
 #endif
@@ -252,7 +252,6 @@ LockManager::cleanup(RC rc)
 {
     assert(rc == COMMIT || rc == ABORT);
     if (rc == ABORT) {
-        //printf("abort clean up\n");
         for (auto access : _access_set)
             access.row->manager->lock_release(_txn, rc);
         for (auto access : _index_access_set)

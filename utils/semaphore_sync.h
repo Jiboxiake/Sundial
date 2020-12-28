@@ -8,7 +8,6 @@ public:
     void              incr();
     void              decr();
     void              wait();
-    void              print();
 private:
     uint32_t          _semaphore;
     pthread_cond_t *  _cond;

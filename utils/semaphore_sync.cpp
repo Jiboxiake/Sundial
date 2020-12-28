@@ -23,15 +23,8 @@ SemaphoreSync::decr() {
     pthread_mutex_lock(_mutex);
     uint32_t sem = --_semaphore;
     pthread_mutex_unlock(_mutex);
-    //printf("sem num is %d\n",sem);
-    if (sem == 0){
-        //printf("signal the thread\n");
+    if (sem == 0)
         pthread_cond_signal(_cond);
-    }
-}
-
-void SemaphoreSync::print(){
-    printf("sem is %d\n",_semaphore);
 }
 
 void
