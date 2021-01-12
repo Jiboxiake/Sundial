@@ -78,6 +78,13 @@ int main(int argc, char* argv[])
         pthreads_worker[i] = new pthread_t;
     }
 #if DISTRIBUTED
+//wait a while to let everything fully build up
+for(int i=0; i<g_num_nodes;i++){
+    int j=1;
+    while(j<1000000000){
+        j++;
+    }
+}
     cout << "Synchronization starts" << endl;
     // Notify other nodes that the current node has finished initialization
     for (uint32_t i = 0; i < g_num_nodes; i ++) {

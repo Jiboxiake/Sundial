@@ -18,9 +18,10 @@ SundialRPCClient::SundialRPCClient() {
         if (line[0] == '#')
             continue;
         else {
-            string url = line;
+            //string url = line;
             if (num_nodes != g_node_id) {
-                _servers[num_nodes] = new SundialRPCClientStub(grpc::CreateChannel(url, grpc::InsecureChannelCredentials()));
+                _servers[num_nodes] = new SundialRPCClientStub(grpc::CreateChannel(line, grpc::InsecureChannelCredentials()));
+                cout <<"sundial client initialized, lisentening to " << line << endl;
             }
             num_nodes ++;
         }
@@ -55,10 +56,13 @@ SundialRPCClient::AsyncCompleteRpc(SundialRPCClient * s) {
 void
 SundialRPCClient::sendRequest(uint64_t node_id, SundialRequest &request, SundialResponse &response) {
     ClientContext context;
+    glob_stats->_stats[GET_THD_ID]->_req_msg_count[ request.request_type() ] ++;
+    glob_stats->_stats[GET_THD_ID]->_req_msg_size[ request.request_type() ] += request.SpaceUsedLong();
     Status status = _servers[node_id]->contactRemote(&context, request, &response);
-    if (!status.ok()) {
+    while(!status.ok()) {
         printf("[REQ] client sendRequest fail: (%d) %s\n", status.error_code(), status.error_message().c_str());
-        assert(false);
+        status = _servers[node_id]->contactRemote(&context, request, &response);
+        //assert(false);
     }
     glob_stats->_stats[GET_THD_ID]->_resp_msg_count[ response.response_type() ] ++;
     glob_stats->_stats[GET_THD_ID]->_resp_msg_size[ response.response_type() ] += response.SpaceUsedLong();

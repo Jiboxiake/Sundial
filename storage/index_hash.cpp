@@ -183,6 +183,9 @@ IndexHash::Node::~Node()
 void
 IndexHash::Node::remove(row_t * row)
 {
+    if(rows.find(row)==rows.end()){
+        assert(false);
+    }
     //M_ASSERT(rows.find(row) != rows.end(), "rows.size() = %ld. thd=%ld\n", rows.size(), GET_THD_ID);
     rows.erase(row);
 }

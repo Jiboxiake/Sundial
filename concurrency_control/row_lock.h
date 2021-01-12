@@ -41,6 +41,8 @@ protected:
         pthread_cond_t* cv;
     };
     RC              wait_die_check(LockEntry* entry,LockType type, bool has_sh);
+    RC              promote_wait();
+    RC              promote_multiple();
     RC              wound_wait_check(LockEntry* entry,LockType type, bool has_sh, bool wait_flag);
     #define LOCK_MAN(txn) ((LockManager *) (txn)->get_cc_manager())
     // only store timestamp which uniquely identifies a txn.
@@ -51,6 +53,7 @@ protected:
     };
     std::set<LockEntry, Compare>        _locking_set;
     std::set<LockEntry, Compare>        _waiting_set;
+    void                                wait(LockType type, TxnManager* txn);
 #else // CC_ALG == NO_WAIT
     struct Compare {
         bool operator() (const LockEntry &en1, const LockEntry &en2) const { return &en1 < &en2; }

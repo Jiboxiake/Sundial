@@ -65,6 +65,7 @@ TxnTable::print_txn()
         while ( node )
         {
 #if WORKLOAD == YCSB
+            char buffer[4000];
             TxnManager * txn = node->txn;
             try{
                 StoreProcedure * sp = txn->get_store_procedure();

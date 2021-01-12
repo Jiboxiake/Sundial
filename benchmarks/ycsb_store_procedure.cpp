@@ -23,6 +23,7 @@ YCSBStoreProcedure::~YCSBStoreProcedure()
 RC
 YCSBStoreProcedure::execute()
 {
+    //printf("ever execute\n");
     RC rc = RCOK;
     WorkloadYCSB * wl = (WorkloadYCSB *) GET_WORKLOAD;
     INDEX * index = wl->the_index;
@@ -64,14 +65,18 @@ YCSBStoreProcedure::execute()
         for (uint32_t i = 0; i < query->get_request_count(); i ++) {
             RequestYCSB * req = &requests[i];
             uint32_t home_node = GET_WORKLOAD->key_to_node(req->key);
-            if (home_node != g_node_id) {
+            if (home_node != g_node_id) {//need rewrite this part
                 uint32_t cc_specific_msg_size = 0;
                 char * cc_specific_msg_data = NULL;
-                rc = get_cc_manager()->register_remote_access(home_node, req->rtype, req->key, 0,
-                                                              cc_specific_msg_size, cc_specific_msg_data);
+                rc=_txn->send_remote_read_request(home_node,req->key,index->get_index_id(),0,req->rtype);
+                if(rc!=RCOK){
+                    return rc;
+                }
+              /*  rc = get_cc_manager()->register_remote_access(home_node, req->rtype, req->key, 0,
+                                                              cc_specific_msg_size, cc_specific_msg_data);*/
                 // if local data is not read, always send normal request to remote node.
                 // to support renew request, need to to indicate which tuple to renew in the message.
-                if (rc == LOCAL_MISS || rc == SPECULATE) {
+            /*    if (rc == LOCAL_MISS || rc == SPECULATE) {
                     if (rc == LOCAL_MISS) has_remote_req = true;
                     else assert(REUSE_IF_NO_REMOTE);
 
@@ -88,15 +93,15 @@ YCSBStoreProcedure::execute()
                         remote_requests[home_node].put( cc_specific_msg_data, cc_specific_msg_size );
                         delete cc_specific_msg_data;
                     }
-                }
+                }*/
             }
         }
 
         _phase = 1;
-        if (has_remote_req)
+       /* if (has_remote_req)
             return LOCAL_MISS;
         else
-            remote_requests.clear();
+            remote_requests.clear();*/
     }
     if (_phase == 1) {
         // access local rows.
@@ -110,8 +115,8 @@ YCSBStoreProcedure::execute()
             }
         }
         _phase = 2;
-        if (!remote_requests.empty())
-            return RCOK;
+      /*  if (!remote_requests.empty())
+            return rc;//return RCOK;*/
     }
 
     if (_phase == 2) {
@@ -131,7 +136,7 @@ YCSBStoreProcedure::execute()
         }
     }
 #endif
-    return RCOK;
+    return COMMIT;
 }
 
 void

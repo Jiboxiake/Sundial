@@ -63,214 +63,53 @@ void Row_lock::init(row_t *row)
     _max_num_waits = g_max_num_waits;
 }
 #if CC_ALG == WAIT_DIE
-RC Row_lock::wait_die_check(LockEntry *entry, LockType type, bool has_sh)
+void Row_lock::wait(LockType type, TxnManager *txn)
 {
-    int flag = 0;
-    if (_locking_set.size() == 0)
+    txn->_lock_ready = false;
+    _waiting_set.insert(LockEntry{type, txn});
+    unlatch();
+    while (!txn->_lock_ready)
     {
-        assert(!has_sh);
-        return RCOK;
+        //spin wait
     }
-    //check if existing lock has conflicts
-    //assert the locking set only contains some sh locks or 1 ex lock
-    if (conflict_lock(type, _locking_set.begin()->type))
-    {
-        if (_locking_set.begin()->type == LOCK_EX)
-        {
-            //only one can grab the ex lock
-            /*  if(_locking_set.size()==2){
-            printf("locking set size is %d \n",_locking_set.size());
-            //assert(false);
-            }else if(_locking_set.size()==3){
-                printf("panic locking size is 3\n");
-            }*/
-            assert(_locking_set.size() == 1);
-        }
-        //check timestamp, if entry's ts is greater than oldest in locking set, it can wait, otherwise abort
-        //TODO: optimization may only requires checking the head
-        for (std::set<LockEntry>::iterator it = _locking_set.begin(); it != _locking_set.end(); it++)
-        {
-            LockEntry *eit = NULL;
-            eit = (LockEntry *)&(*it);
-            if (LOCK_MAN(entry->txn)->get_ts() > LOCK_MAN(eit->txn)->get_ts())
-            {
-                //printf("txn aborted\n");
-                return ABORT;
-            }
-        }
-
-        //if the lock itself has a sh already
-        if (has_sh)
-        {
-            while (_locking_set.size() != 1)
-            {
-                pthread_cond_init((entry->cv), NULL);
-                _waiting_set.insert(*entry);
-                pthread_cond_wait((entry->cv), &_latch);
-            }
-            //printf("get out of updating wait\n");
-        }
-        //pthread_cond_t local_cv;
-        else
-        {
-            while (!_locking_set.empty() && conflict_lock(type, _locking_set.begin()->type))
-            {
-
-                pthread_cond_init((entry->cv), NULL);
-                _waiting_set.insert(*entry);
-                pthread_cond_wait((entry->cv), &_latch);
-                //printf("get out extra wait\n");
-            }
-        }
-        // printf("get out of wait\n");
-        return RCOK;
-    }
-    //no conflict
-    else
-    {
-        //a very special case, a "younger lock already waiting for ex  but another older txn comes in and grabs the shared lock"
-        if (type == LOCK_SH)
-        {
-            //if there is someone waiting and sh has no conflict, then it must be an ex
-            if (!_waiting_set.empty())
-            {
-                /*for (std::set<LockEntry>::iterator it = _waiting_set.begin(); it != _waiting_set.end(); it++)
-                {
-                    LockEntry *eit = NULL;
-                    eit = (LockEntry *)&(*it);
-                    if (LOCK_MAN(entry->txn)->get_ts() > LOCK_MAN(eit->txn)->get_ts())
-                        return ABORT;
-                }*/
-                std::set<LockEntry>::iterator it;
-                while (true)
-                {
-                    if (_waiting_set.empty())
-                    {
-                        return RCOK;
-                    }
-                    it = _waiting_set.begin();
-                    LockEntry *eit = NULL;
-                    eit = (LockEntry *)&(*it);
-
-                    if (LOCK_MAN(entry->txn)->get_ts() > LOCK_MAN(eit->txn)->get_ts())
-                        return RCOK;
-                    else
-                    {
-                        pthread_cond_init((entry->cv), NULL);
-                        _waiting_set.insert(*entry);
-                        pthread_cond_wait((entry->cv), &_latch);
-                        return wait_die_check(entry, type, has_sh);
-                    }
-                }
-            }
-        }
-        //no special case, no conflict, can add to the locking set
-        return RCOK;
-    }
+    latch();
 }
 #endif
 #if CC_ALG == WOUND_WAIT
 //handles wound_wait, everything is done under latch
-RC Row_lock::wound_wait_check(LockEntry *entry, LockType type, bool has_sh, bool wait_flag)
+RC Row_lock::promote_wait()
 {
-    if (entry->txn->is_killed())
+    if (_waiting_set.empty())
     {
-        return ABORT;
-    }
-    if (_locking_set.empty())
-    {
-        assert(!has_sh);
         return RCOK;
-    } 
-    else if (_locking_set.size() == 1)
-    {
-        if (_locking_set.begin()->txn == entry->txn)
-        {
-            assert(has_sh);
-            return RCOK;
-        }
     }
-    int flag=0;
-    //if locking set head conflicts with type
-    while (!_locking_set.empty() && conflict_lock(type, _locking_set.begin()->type))
+    if (_locking_set.empty() || !conflict_lock(_waiting_set.begin()->type, _locking_set.begin()->type) || LOCK_MAN(_waiting_set.begin()->txn)->get_ts() <= LOCK_MAN(_locking_set.begin()->txn)->get_ts())
     {
-        if (entry->txn->is_killed())
+        std::set<LockEntry>::iterator head = _waiting_set.begin();
+        head->txn->_lock_ready = true;
+        _waiting_set.erase(head);
+        //printf("wake up 1\n");
+    }
+    return RCOK;
+}
+RC Row_lock::promote_multiple()
+{
+    if (_waiting_set.empty())
+    {
+        return RCOK;
+    }
+    for (std::set<LockEntry>::iterator it = _waiting_set.begin(); it != _waiting_set.end(); it++)
+    {
+        //no conflict, can wake up
+        if (!conflict_lock(it->type, _locking_set.begin()->type))
         {
-            //printf("killed 1\n");
-            return ABORT; 
-        }
-        if(flag>0){
-            printf("%d th interation loop\n",flag);
-            }
-        std::set<LockEntry>::iterator it = _locking_set.begin();
-        LockEntry *eit = NULL;
-        eit = (LockEntry *)&(*it);
-        if (LOCK_MAN(eit->txn)->get_ts() < LOCK_MAN(entry->txn)->get_ts())
-        {
-            if(flag>0){
-            printf("%d th interation wait again\n",flag);
-            }
-            pthread_cond_init((entry->cv), NULL);
-            if(has_sh){
-                printf("wait with self\n");
-            }
-            _waiting_set.insert(*entry);
-            pthread_cond_wait((entry->cv), &_latch);
-            if(has_sh)
-                flag++;
-            if(entry->txn->is_killed()&&flag>0){
-                //printf("%d th iteration self was killed while waiting with txn id %d\n",flag,entry->txn->get_txn_id());
-                return ABORT;
-            }
-        }
-        else if (LOCK_MAN(eit->txn)->get_ts() > LOCK_MAN(entry->txn)->get_ts())
-        {
-            assert(!has_sh);
-            if(flag>0){
-            //printf("%d th interation kill all\n",flag);
-            }
-            for (std::set<LockEntry>::iterator it = _locking_set.begin(); it != _locking_set.end(); it++)
-            {
-                
-                it->txn->wound();
-                assert(it->txn->is_killed());
-                _locking_set.erase(it);
-            }
+            it->txn->_lock_ready = true;
+            _waiting_set.erase(it);
+            //printf("wake up multiple\n");
         }
         else
         {
-            assert(has_sh);
-           // printf("kill all with self\n");
-            for (std::set<LockEntry>::iterator it = _locking_set.begin(); it != _locking_set.end(); it++)
-            {
-                if(it->txn==entry->txn){
-                    continue;
-                }
-                it->txn->wound();
-                assert(it->txn->is_killed());
-                _locking_set.erase(it);
-            }
-            assert(_locking_set.size()==1);
-            assert(_locking_set.begin()->type==LOCK_SH);
-            
-            if(flag>0){
-                printf("finally gets the lock\n");
-            }
             return RCOK;
-        }
-        if (entry->txn->is_killed())
-        {
-            if(flag>0){
-                assert(_locking_set.size()==0);
-                assert(has_sh);
-            }
-            return ABORT;
-        }
-    }
-    if(has_sh){
-        if(_locking_set.empty()){
-            //printf("falg is %d\n",flag);
-            assert(false);
         }
     }
     return RCOK;
@@ -280,6 +119,7 @@ RC Row_lock::wound_wait_check(LockEntry *entry, LockType type, bool has_sh, bool
 RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
 {
     RC rc = RCOK;
+    //printf("grabing lock %p \n",this);
     if (txn == NULL)
     {
         assert(false);
@@ -315,6 +155,9 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
             else
                 rc = ABORT;
         }
+        else{
+            assert(false);
+        }
     }
     else
     {
@@ -337,140 +180,209 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
             //if current txn is the only txn holding a lock, just upgrade it
             if (_locking_set.size() == 1)
                 entry->type = type;
+            //if there are other txns holding the lock
             else
-            { //if there are other txns holding the lock
-                rc = wait_die_check(entry, type, true);
-                //get out of wait or no wait at all
-                if (rc == RCOK)
+            {
+                std::set<LockEntry>::iterator end = _locking_set.end();
+                end--;
+                assert(LOCK_MAN(txn)->get_ts() >= LOCK_MAN(end->txn)->get_ts());
+                assert(end->type==LOCK_SH);
+                //if the txn is older than the oldest lock holder,wait
+                if (LOCK_MAN(txn)->get_ts() == LOCK_MAN(end->txn)->get_ts())
                 {
+                    
+                    while (_locking_set.size() != 1)
+                    {
+                        wait(type,txn);
+                    }
+                    assert(_locking_set.begin()->txn == txn);
                     entry->type = type;
+                }
+                else
+                {
+                    rc=ABORT;
                 }
             }
         }
+        else{
+            assert(false);
+        }     
     }
     else
-    { //a new lock entry is needed, not exist
-        //init cv here
-        LockEntry entry1 = LockEntry{type, txn};
-        pthread_cond_t local_cv;
-        entry1.cv = &local_cv;
-        rc = wait_die_check(&entry1, type, false);
-        if (rc == RCOK)
+    { 
+        if (_locking_set.empty() || !conflict_lock(type, _locking_set.begin()->type))
         {
-            _locking_set.insert(entry1);
+            if(_locking_set.size()==1){
+            std::set<LockEntry>::iterator begin = _locking_set.begin();
+            std::set<LockEntry>::iterator end = _locking_set.end();
+            end--;
+            assert (begin==end);
+            }
+            //double check waiting set
+            bool waited=false;
+            if(!_waiting_set.empty()&&LOCK_MAN(txn)->get_ts()<LOCK_MAN(_waiting_set.begin()->txn)->get_ts()){
+                assert(conflict_lock(_waiting_set.begin()->type,type));
+                if(_locking_set.empty()){
+                    assert(_locking_set.begin()->type==LOCK_EX);
+                }
+                wait(type,txn);
+                waited=true;
+            }
+            if(waited){
+               rc=lock_get(type,txn,false);
+            }else{
+                _locking_set.insert(LockEntry{type, txn});
+            }
+        }else{
+            bool waited=false;
+            std::set<LockEntry>::iterator end = _locking_set.end();
+            end--;
+            TxnManager* end_txn=end->txn;
+            assert(LOCK_MAN(txn)->get_ts()!=LOCK_MAN(end_txn)->get_ts());
+            //txn is older than the oldest lock holder, can wait
+            if(LOCK_MAN(txn)->get_ts()<LOCK_MAN(end_txn)->get_ts()){
+                wait(type,txn);
+                waited=true;
+            }else{
+                rc=ABORT;
+            }
+            if(waited){
+                rc=lock_get(type,txn,false);
+            }
         }
+        
     }
 
 #elif CC_ALG == WOUND_WAIT
     if (txn->is_killed())
     {
-        //txn->recover();
-        //printf("killed 3\n");
+        //printf("abort 1\n");
         if (need_latch)
-            unlatch(); /* condition */
+            unlatch();
         return ABORT;
     }
-    if (!_locking_set.empty())
+    LockEntry entry = LockEntry{type, txn};
+    pthread_cond_t local_cv;
+    entry.cv = &local_cv;
+    ///two situations you can just grab the lock
+    if (_locking_set.size() == 0)
     {
-        if (_locking_set.begin()->type == LOCK_EX)
+        _locking_set.insert(entry);
+        if (need_latch)
         {
-            //only one can grab the ex lock
-            assert(_locking_set.size() == 1);
+            unlatch();
         }
-        LockEntry *entry = NULL;
-        for (std::set<LockEntry>::iterator it = _locking_set.begin(); it != _locking_set.end(); it++)
-            if (it->txn == txn)
-                entry = (LockEntry *)&(*it);
-        if (entry)
+        return RCOK;
+    }
+    //may need optimization, do we want to actively remove transactions or let them know they need to abort and release the lock
+    //we also want to know if we want to kill transactions even though we have to wait first
+    bool has_conflict = false;
+    while (!_locking_set.empty() && conflict_lock(_locking_set.begin()->type, type))
+    {
+        has_conflict = false;
+        if (txn->is_killed())
         {
-            if (entry->type != type)
-            {
-                assert(type == LOCK_EX && entry->type == LOCK_SH);
-                if (_locking_set.size() == 1)
-                {
-                    assert(entry->txn == txn);
-                    entry->type = type;
-                }
-                //must deal with other locks
-                else
-                {
-                    LockEntry entry1 = LockEntry{entry->type, entry->txn};
-                    pthread_cond_t local_cv;
-                    entry1.cv = &local_cv;
-                    rc = wound_wait_check(&entry1, type, true, false);
-                    //after check there is no conflict or get out of wait
-                    if (rc == RCOK)
-                    {
-                        entry->type = type;
-                        assert(_locking_set.size() == 1);
-                    }
-                    else
-                    {
-                        assert(entry1.txn->is_killed());
-                        if (need_latch)
-                            unlatch();
-                        return rc;
-                    }
-                }
-            }
+            if (need_latch)
+                unlatch();
+            return ABORT;
         }
-        else
+        if (_locking_set.size() == 1)
         {
-            //a new entry is needed
-            LockEntry entry1 = LockEntry{type, txn};
-            pthread_cond_t local_cv;
-            entry1.cv = &local_cv;
-            rc = wound_wait_check(&entry1, type, false, false);
-            if (rc == RCOK)
+            if (_locking_set.begin()->txn == txn)
             {
-                if (entry1.txn == NULL)
-                {
-                    assert(false);
-                }
-                _locking_set.insert(entry1);
-            }
-            else
-            {
+                assert(type == LOCK_EX);
+                assert(_locking_set.begin()->type == LOCK_SH);
+                std::set<LockEntry>::iterator head = _locking_set.begin();
+                _locking_set.erase(head);
+                _locking_set.insert(entry);
+                assert(_locking_set.size() == 1);
                 if (need_latch)
+                {
                     unlatch();
-                return rc;
+                }
+                return RCOK;
             }
         }
-    }
-    else
-    {
+        for (std::set<LockEntry>::iterator it = _locking_set.begin();
+             it != _locking_set.end(); it++)
+        {
+            if (conflict_lock(type, it->type))
+            {
+                has_conflict = true;
+                txn->_lock_ready = false;
+            }
+            if (has_conflict && LOCK_MAN(txn)->get_ts() < LOCK_MAN(it->txn)->get_ts())
+            {
+                //if trying to kill a committing transaction, abort yourself
+                it->txn->latch();
+                if (it->txn->is_protected())
+                {
+                    it->txn->unlatch();
+                    if (need_latch)
+                    {
+                        unlatch();
+                    }
 
-        //locking set is empty, just grab the lock
-        LockEntry entry1 = LockEntry{type, txn};
-        pthread_cond_t local_cv;
-        entry1.cv = &local_cv;
-        _locking_set.insert(entry1);
+                    return ABORT;
+                }
+                it->txn->wound();
+                it->txn->unlatch();
+            }
+        }
+        if (has_conflict)
+        {
+            _waiting_set.insert(entry);
+            unlatch();
+
+            //wait till conflicting ones release the lock
+            while ((!txn->_lock_ready) && (!txn->is_killed()))
+            {
+                //just wait bro
+            }
+
+            //printf("get out of wait\n");
+            latch();
+        }
+        if (txn->is_killed())
+        {
+            if (need_latch)
+                unlatch();
+            return ABORT;
+        }
     }
+    _locking_set.insert(entry);
+    assert(!_locking_set.empty());
+    //after inserting a new entry we can check if we can wake up more.
+    promote_multiple();
 #endif
     if (need_latch)
         unlatch();
-
     return rc;
 }
 
 RC Row_lock::lock_release(TxnManager *txn, RC rc)
 {
+    //printf("lock release\n");
     assert(rc == COMMIT || rc == ABORT);
     latch();
+    //printf("txn %d is releasing %d\n",txn->get_txn_id(),this);
 #if CC_ALG == NO_WAIT
     //printf("txn=%ld releases this=%ld\n", txn->get_txn_id(), (uint64_t)this);
     LockEntry entry = {LOCK_NONE, NULL};
+    int flag = 0;
     for (std::set<LockEntry>::iterator it = _locking_set.begin();
          it != _locking_set.end(); it++)
     {
         if (it->txn == txn)
         {
+            flag = 1;
             entry = *it;
             assert(entry.txn);
             _locking_set.erase(it);
             break;
         }
     }
+    assert(flag);
 #if CONTROLLED_LOCK_VIOLATION
     // NOTE
     // entry.txn can be NULL. This happens because Row_lock manager locates in
@@ -504,7 +416,6 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
 #endif
 
 #elif CC_ALG == WAIT_DIE
-    LockEntry *entry = NULL;
     int flag = 0;
     // remove from locking set
     for (std::set<LockEntry>::iterator it = _locking_set.begin();
@@ -519,14 +430,9 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
             break;
         }
     }
-    //has been killed
     if (flag == 0)
     {
-        assert(txn->is_killed());
-        unlatch();
-        // printf("release return\n");
-        return RCOK;
-        //printf("pass assertion\n");
+        printf("error\n");
     }
     //if waiting set is not empty, we can check if we can wake it up
     if (!_waiting_set.empty())
@@ -539,14 +445,9 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
             if (_waiting_set.begin()->type == LOCK_EX)
             {
                 std::set<LockEntry>::iterator it = _waiting_set.begin();
-                entry = (LockEntry *)&(*it);
-
                 //wake 1 ex wait
-                // printf("wake up an ex\n");
+                it->txn->_lock_ready=true;
                 _waiting_set.erase(it);
-                int a = pthread_cond_signal((entry->cv));
-                //printf("return is %d\n",a);
-
             } //all we can wake up multiple SH lock threads
             else if (_waiting_set.begin()->type == LOCK_SH)
             {
@@ -554,10 +455,8 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
                 {
                     if (it->type == LOCK_SH)
                     {
-                        entry = (LockEntry *)&(*it);
-                        //  printf("wake up an sh\n");
+                        it->txn->_lock_ready=true;
                         _waiting_set.erase(it);
-                        int o = pthread_cond_signal((entry->cv));
                         //printf("return is %d\n",o);
                     }
                     else
@@ -569,12 +468,12 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
         }
     }
 #elif CC_ALG == WOUND_WAIT
-    LockEntry *entry = NULL;
     int flag = 0;
     // remove from locking set
     for (std::set<LockEntry>::iterator it = _locking_set.begin();
          it != _locking_set.end(); it++)
     {
+        assert(it->txn);
         if (it->txn == txn)
         {
             _locking_set.erase(it);
@@ -582,60 +481,8 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
             break;
         }
     }
-    //has been killed
-    if (flag == 0)
-    {
-        assert(txn->is_killed());
-        //printf("pass assertion\n");
-    }
-    //if waiting set is not empty, we can check if we can wake it up
-    if (!_waiting_set.empty())
-    {
-        //printf("try to wake up!!!\n");
-        //if locking set is empty or no conflict between waiting set's head and locking set's head
-        if (_locking_set.empty() || !conflict_lock(_waiting_set.begin()->type, _locking_set.begin()->type))
-        {
-            //if waiting set's head is ex
-            if (_waiting_set.begin()->type == LOCK_EX)
-            {
-                std::set<LockEntry>::iterator it = _waiting_set.begin();
-                entry = (LockEntry *)&(*it);
-
-                //wake 1 ex wait
-                // printf("wake up an ex\n");
-                _waiting_set.erase(it);
-                int a = pthread_cond_signal((entry->cv));
-                //printf("return is %d\n",a);
-
-            } //all we can wake up multiple SH lock threads
-            else if (_waiting_set.begin()->type == LOCK_SH)
-            {
-                for (std::set<LockEntry>::iterator it = _waiting_set.begin(); it != _waiting_set.end(); it++)
-                {
-                    if (it->type == LOCK_SH)
-                    {
-                        entry = (LockEntry *)&(*it);
-                        //  printf("wake up an sh\n");
-                        _waiting_set.erase(it);
-                        int o = pthread_cond_signal((entry->cv));
-                        //printf("return is %d\n",o);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-            }
-        }
-        else if (LOCK_MAN(_waiting_set.begin()->txn)->get_ts() <= LOCK_MAN(_locking_set.begin()->txn)->get_ts())
-        {
-            std::set<LockEntry>::iterator it = _waiting_set.begin();
-            entry = (LockEntry *)&(*it);
-            _waiting_set.erase(it);
-            int a = pthread_cond_signal((entry->cv));
-            //printf("wake up wound\n");
-        }
-    }
+    assert(flag == 1);
+    promote_wait();
     /*LockEntry entry {LOCK_NONE, NULL};
     // remove from locking set
     for (std::set<LockEntry>::iterator it = _locking_set.begin();

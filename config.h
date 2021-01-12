@@ -5,15 +5,15 @@
 
 // number of server threads on each node
 #define NUM_WORKER_THREADS              32//4096 //2048 //1024
-#define NUM_RPC_SERVER_THREADS          24
+#define NUM_RPC_SERVER_THREADS          32
 
 // only a limited number of active threads are allowed. This configuration is
 // effective only when LOG_ENABLE == true.
 #define ENABLE_ADMISSION_CONTROL        false
-#define MAX_NUM_ACTIVE_TXNS             32
+#define MAX_NUM_ACTIVE_TXNS             4
 
 // WORKLOAD can be YCSB or TPCC
-#define WORKLOAD                        TPCC
+#define WORKLOAD                        YCSB
 
 // Statistics
 // ==========
@@ -26,14 +26,13 @@
 // Concurrency Control
 // ===================
 // Supported concurrency control algorithms: WAIT_DIE, NO_WAIT, TICTOC, F_ONE
-#define CC_ALG                          WOUND_WAIT
+#define CC_ALG                          WAIT_DIE
 
 #define ABORT_PENALTY                   10000000  // in nanoseconds
 
 // [ INDEX ]
 #define INDEX_STRUCT                    IDX_HASH
-#define BTREE_ORDER                     16
-
+#define BTREE_ORDER                     16promote_multiple();
 // [Two Phase Locking]
 #define NO_LOCK                         false // NO_LOCK=true : used to model H-Store
 // [TIMESTAMP]
@@ -103,7 +102,7 @@
 // Number of tuples per node
 #define SYNTH_TABLE_SIZE                (1024 * 10) // * 1024)
 #define ZIPF_THETA                      0.6
-#define READ_PERC                       0.9
+#define READ_PERC                       0.4
 #define PERC_READONLY_DATA              0
 #define PERC_REMOTE                     0
 #define SINGLE_PART_ONLY                false // access single partition only
@@ -118,7 +117,7 @@
 // For large warehouse count, the tables do not fit in memory
 // small tpcc schemas shrink the table size.
 #define TPCC_SMALL                      false
-#define NUM_WH                          16
+#define NUM_WH                          32
 
 // In the current implementation, the standard delivery transaction is modeled
 // as 10 seperate transactions (one for each district). All the percentage

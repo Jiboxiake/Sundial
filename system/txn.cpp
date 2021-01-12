@@ -67,11 +67,18 @@ uint64_t TxnManager::wound(){
     killed=true;
     return 1;
 }
-
+void TxnManager:: protect(){
+    _protected=true;
+}
 uint64_t TxnManager::recover(){
-    //printf("recovered\n");
     killed=false;
     return 1;
+}
+void TxnManager::latch(){
+    pthread_mutex_lock(&_latch);
+}
+void TxnManager::unlatch(){
+    pthread_mutex_unlock(&_latch);
 }
 #endif
 
@@ -162,6 +169,12 @@ TxnManager::start()
 {
     RC rc = RCOK;
     _txn_state = RUNNING;
+    _lock_ready=true;
+    #if CC_ALG==WOUND_WAIT
+    pthread_mutex_init(&_latch, NULL);
+    _protected=false;
+    killed=false;
+    #endif
     // running transaction on the host node
     rc = _store_procedure->execute();
     assert(rc == COMMIT || rc == ABORT);
@@ -185,15 +198,32 @@ TxnManager::start()
 
 RC
 TxnManager::process_commit_phase_singlepart(RC rc)
-{
-    bool is_killed = this->is_killed();
-    if (rc == COMMIT&&!is_killed) {
+{   
+    #if CC_ALG==WOUND_WAIT
+    latch();
+    protect();//so it cannot be killed now
+    assert(this->is_protected());
+    unlatch();
+    if (rc == COMMIT&&!this->is_killed()) {
         _txn_state = COMMITTING;
-    } else if (rc == ABORT||is_killed) {
+    } else if (rc == ABORT||this->is_killed()) {
+        rc=ABORT;
         _txn_state = ABORTING;
         _store_procedure->txn_abort();
     } else
         assert(false);
+    #else
+        if (rc == COMMIT) {
+        _txn_state = COMMITTING;
+    } else if (rc == ABORT) {
+        rc=ABORT;
+        _txn_state = ABORTING;
+        _store_procedure->txn_abort();
+    } else
+        assert(false);
+    
+    #endif
+    
 #if LOG_ENABLE
     // TODO. Changed from design A to design B
     // [Design A] the worker thread is detached from the transaction once the log
@@ -257,10 +287,7 @@ TxnManager::process_commit_phase_singlepart(RC rc)
     }
 #else
     // if logging didn't happen, process commit phase
-    _cc_manager->cleanup(rc);
-    #if CC_ALG==WOUND_WAIT
-            recover();
-    #endif          
+    _cc_manager->cleanup(rc);        
     _txn_state = (rc == COMMIT)? COMMITTED : ABORTED;
 #endif
     return rc;

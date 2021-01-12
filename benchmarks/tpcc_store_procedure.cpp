@@ -46,22 +46,32 @@ RC TPCCStoreProcedure::execute()
     {
     case TPCC_PAYMENT:
     {
+        //printf("payment with txn id %d\n",_txn->get_txn_id());
+        //_txn->txn_type=0;
         return execute_payment();
     }
     case TPCC_NEW_ORDER:
     {
+        //printf("new orderwith txn id %d\n",_txn->get_txn_id());
+        _txn->txn_type=10086;
         return execute_new_order();
     }
     case TPCC_ORDER_STATUS:
     {
+        //_txn->txn_type=2;
+        //printf("order status with txn id %d\n",_txn->get_txn_id());
         return execute_order_status();
     }
     case TPCC_DELIVERY:
     {
+        //_txn->txn_type=3;
+        //printf("delivery with txn id %d\n",_txn->get_txn_id());
         return execute_delivery();
     }
     case TPCC_STOCK_LEVEL:
     {
+        //_txn->txn_type=4;
+        //printf("stock level with txn id %d\n",_txn->get_txn_id());
         return execute_stock_level();
     }
     default:
@@ -297,16 +307,16 @@ RC TPCCStoreProcedure::execute_new_order()
             _self_abort = true;
             return ABORT;
         }
-        else if (rc==ABORT){
-            return ABORT;
+        else if (rc!=RCOK){
+            return rc;
         }
-        {
-            /* code */
-        }
+
         
         _curr_row = *rows->begin();
         rc = get_cc_manager()->get_row(_curr_row, RD, _curr_data, key);
-
+        if (rc!=RCOK){
+            return rc;
+        }
         __attribute__((unused)) LOAD_VALUE(int64_t, i_price, schema, _curr_data, I_PRICE);
         _i_price[_curr_ol_number] = i_price;
         __attribute__((unused)) LOAD_VALUE(char *, i_name, schema, _curr_data, I_NAME);
@@ -327,12 +337,14 @@ RC TPCCStoreProcedure::execute_new_order()
         if (node_id == g_node_id)
         {
             GET_DATA(key, wl->i_stock, WR);
+
         }
         else
         {
             rc = _txn->send_remote_read_request(node_id, key, IDX_STOCK, TAB_STOCK, WR);
-            if (rc == ABORT)
+            if (rc!=RCOK){
                 return rc;
+            }
         }
 
         char *_curr_data = get_cc_manager()->get_data(key, TAB_STOCK);
@@ -383,10 +395,10 @@ RC TPCCStoreProcedure::execute_new_order()
         row->set_value(OL_AMOUNT, &ol_amount);
 
         rc = get_cc_manager()->row_insert(wl->t_orderline, row);
-        _ol_num++;
         if (rc != RCOK)
             return rc;
     }
+            _ol_num++;
     return COMMIT;
 }
 

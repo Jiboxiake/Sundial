@@ -523,19 +523,24 @@ WorkloadTPCC::gen_query()
         double x = glob_manager->rand_double();
         if (x < g_perc_payment)
             return new QueryPaymentTPCC();
+            //continue;
         x -= g_perc_payment;
         if (x < g_perc_new_order)
             return new QueryNewOrderTPCC();
+            //continue;
         x -= g_perc_new_order;
         if (x < g_perc_order_status)
             return new QueryOrderStatusTPCC();
+            //continue;
         x -= g_perc_order_status;
 
         if (x < g_perc_delivery)
             return new QueryDeliveryTPCC();
+            //continue;
         x -= g_perc_delivery;
         if (x < PERC_STOCKLEVEL)
             return new QueryStockLevelTPCC();
+            //continue;
         assert(false);
     }
     return NULL;

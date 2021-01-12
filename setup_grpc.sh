@@ -9,5 +9,5 @@ git submodule update --init
 cd test/distrib/cpp/
 sudo ./run_distrib_test_cmake.sh
 export PKG_CONFIG_PATH=/usr/local/grpc/lib/pkgconfig
-export LD_LIBRARY_PATH=/users/Libin_Z/Wound_wait/libs
+export LD_LIBRARY_PATH=/users/Libin_Z/Sundial/libs
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH

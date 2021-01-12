@@ -31,28 +31,40 @@ public:
     TxnManager() : TxnManager(NULL, NULL) {};
     TxnManager(QueryBase * query, WorkerThread * thread);
     virtual ~TxnManager();
-    bool killed;
-    // start to run transactions
+    
+    // start to run transactions 
     RC start();
 
     // rerun previously aborted transactions
     RC restart();
+    int               txn_type;
+    bool _lock_ready;
     #if CC_ALG==WOUND_WAIT
+    bool _protected;
+    bool killed;
+    
+    pthread_mutex_t _latch;
     uint64_t wound();
     uint64_t recover();
+    void     protect();
+    void            latch();
+    void            unlatch();
     #endif
 
     void              set_txn_id(uint64_t txn_id) { _txn_id = txn_id; }
     uint64_t          get_txn_id()          { return _txn_id; }
-    bool              is_read_only()        { return _is_read_only; }
+    bool              is_read_only()        { return _is_read_only; }   
     void              set_read_only(bool readonly) { _is_read_only = readonly; }
     bool              is_single_partition() { return _is_single_partition; } 
-    bool              is_killed()           {return killed;}
+    
     CCManager *       get_cc_manager()      { return _cc_manager; }
     StoreProcedure *  get_store_procedure() { return _store_procedure; };
     State             get_txn_state()       { return _txn_state; }
     void              set_txn_state(State state) { _txn_state = state; }
-
+    #if CC_ALG==WOUND_WAIT
+    bool              is_protected()        {return _protected;}
+    bool              is_killed()           {return killed;}
+    #endif
     // Synchronization
     // ===============
     SemaphoreSync *   log_semaphore;
