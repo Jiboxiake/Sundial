@@ -221,7 +221,6 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
             //double check waiting set
             bool waited=false;
             if(!_waiting_set.empty()&&LOCK_MAN(txn)->get_ts()<LOCK_MAN(_waiting_set.begin()->txn)->get_ts()){
-                assert(conflict_lock(_waiting_set.begin()->type,type));
                 if(_locking_set.empty()){
                     assert(_locking_set.begin()->type==LOCK_EX);
                 }

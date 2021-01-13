@@ -102,7 +102,7 @@
 // Number of tuples per node
 #define SYNTH_TABLE_SIZE                (1024 * 10) // * 1024)
 #define ZIPF_THETA                      0.6
-#define READ_PERC                       0.4
+#define READ_PERC                       0.8
 #define PERC_READONLY_DATA              0
 #define PERC_REMOTE                     0
 #define SINGLE_PART_ONLY                false // access single partition only
