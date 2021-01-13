@@ -1,6 +1,6 @@
 Sundial
 =======
-
+I switched to the cleaner and more precise version of gRPC implementation from https://github.com/ScarletGuo/Sundial/tree/grpc-20201008 .
 Sundial is a distributed OLTP database management system (DBMS). It supports a number of traditional/modern distributed concurrency control protocols, including WAIT_DIE, NO_WAIT, F1 (Google), MaaT, and TicToc. Sundial is implemented on top of [DBx1000](https://github.com/yxymit/DBx1000). 
 
 The following two papers describe Sundial and DBx1000, respectively: 
