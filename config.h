@@ -1,7 +1,7 @@
 #pragma once
 
-#define DISTRIBUTED                     true
-#define NUM_NODES                       2
+#define DISTRIBUTED                     false
+#define NUM_NODES                       1
 
 // number of server threads on each node
 #define NUM_WORKER_THREADS              32//4096 //2048 //1024
@@ -26,7 +26,7 @@
 // Concurrency Control
 // ===================
 // Supported concurrency control algorithms: WAIT_DIE, NO_WAIT, TICTOC, F_ONE
-#define CC_ALG                          NO_WAIT
+#define CC_ALG                          WOUND_WAIT
 
 #define ABORT_PENALTY                   10000000  // in nanoseconds
 
