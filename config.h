@@ -10,7 +10,7 @@
 // only a limited number of active threads are allowed. This configuration is
 // effective only when LOG_ENABLE == true.
 #define ENABLE_ADMISSION_CONTROL        false
-#define MAX_NUM_ACTIVE_TXNS             4
+#define MAX_NUM_ACTIVE_TXNS             32
 
 // WORKLOAD can be YCSB or TPCC
 #define WORKLOAD                        YCSB
@@ -26,7 +26,7 @@
 // Concurrency Control
 // ===================
 // Supported concurrency control algorithms: WAIT_DIE, NO_WAIT, TICTOC, F_ONE
-#define CC_ALG                          WAIT_DIE
+#define CC_ALG                          NO_WAIT
 
 #define ABORT_PENALTY                   10000000  // in nanoseconds
 
@@ -104,7 +104,7 @@
 #define ZIPF_THETA                      0.6
 #define READ_PERC                       0.8
 #define PERC_READONLY_DATA              0
-#define PERC_REMOTE                     0
+#define PERC_REMOTE                     0.6
 #define SINGLE_PART_ONLY                false // access single partition only
 #define REQ_PER_QUERY                   16
 #define THINK_TIME                      0  // in us

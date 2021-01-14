@@ -187,9 +187,9 @@ TxnManager::start()
             rc = process_2pc_phase2(ABORT);
         else {
             _prepare_start_time = get_sys_clock();
-            process_2pc_phase1();
+            rc=process_2pc_phase1();
             _commit_start_time = get_sys_clock();
-            rc = process_2pc_phase2(COMMIT);
+            rc = process_2pc_phase2(rc);
         }
     }
     update_stats();
