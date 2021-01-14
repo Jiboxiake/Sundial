@@ -357,6 +357,10 @@ RC TxnManager::send_remote_read_request(uint64_t node_id, uint64_t key, uint64_t
 
 RC TxnManager::process_2pc_phase1()
 {
+    #if CC_ALG==WOUND_WAIT
+    assert(!is_killed());
+    #endif
+    RC rc = COMMIT;
     // Start Two-Phase Commit
     _txn_state = PREPARING;
 #if LOG_ENABLE
@@ -415,16 +419,21 @@ RC TxnManager::process_2pc_phase1()
     {
         assert(it->second->state == RUNNING);
         SundialResponse &response = it->second->response;
-        assert(response.response_type() == SundialResponse::PREPARED_OK || response.response_type() == SundialResponse::PREPARED_OK_RO);
+        /*assert(response.response_type() == SundialResponse::PREPARED_OK || response.response_type() == SundialResponse::PREPARED_OK_RO);
         if (!(response.response_type() == SundialResponse::PREPARED_OK || response.response_type() == SundialResponse::PREPARED_OK_RO))
-            cout << response.response_type() << endl;
+            cout << response.response_type() << endl;*/
         if (response.response_type() == SundialResponse::PREPARED_OK)
             it->second->state = COMMITTING;
-        else
+        else if(response.response_type() == SundialResponse::PREPARED_OK_RO)
             it->second->state = COMMITTED;
+        else{
+            assert(response.response_type() == SundialResponse::PREPARED_ABORT);
+            it->second->state=ABORTED;
+            rc=ABORT;
+        }    
     }
 #endif
-    return COMMIT;
+    return rc;
 }
 
 RC TxnManager::process_2pc_phase2(RC rc)
