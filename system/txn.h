@@ -50,6 +50,8 @@ public:
     void            latch();
     void            unlatch();
     #endif
+    
+
 
     void              set_txn_id(uint64_t txn_id) { _txn_id = txn_id; }
     uint64_t          get_txn_id()          { return _txn_id; }

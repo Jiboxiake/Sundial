@@ -41,9 +41,9 @@ SundialRPCClient::AsyncCompleteRpc(SundialRPCClient * s) {
     while (s->cq.Next(&got_tag, &ok)) {
         // The tag in this example is the memory location of the call object
         AsyncClientCall* call = static_cast<AsyncClientCall*>(got_tag);
-        if (!call->status.ok()) {
+        while(!call->status.ok()) {
             printf("[REQ] client rec response fail: (%d) %s\n", call->status.error_code(), call->status.error_message().c_str());
-            assert(false);
+            //assert(false);
         }
         // handle return value for non-system response
         assert(call->reply->response_type() != SundialResponse::SYS_RESP);

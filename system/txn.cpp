@@ -528,6 +528,8 @@ RC TxnManager::process_remote_request(const SundialRequest *request, SundialResp
             {
                 printf("[txn=%ld] key=%ld, index_id=%ld, access_type=%d\n",
                        get_txn_id(), key, index_id, access_type);
+                rc=ABORT;
+                break;       
             }
             assert(rows);
             row_t *row = *rows->begin();
@@ -596,6 +598,7 @@ RC TxnManager::process_remote_request(const SundialRequest *request, SundialResp
         // optimization)
         //log_semaphore->wait();
         response->set_response_type(SundialResponse::ACK);
+
         return rc;
     default:
         assert(false);

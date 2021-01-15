@@ -203,10 +203,7 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
                     rc=ABORT;
                 }
             }
-        }
-        else{
-            assert(false);
-        }     
+        }  
     }
     else
     { 
@@ -464,6 +461,12 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
                     }
                 }
             }
+        }else if(_locking_set.size()==1&&_locking_set.begin()->txn==_waiting_set.begin()->txn){
+            assert(_locking_set.begin()->type==LOCK_SH&&_waiting_set.begin()->type==LOCK_EX);
+            std::set<LockEntry>::iterator it = _waiting_set.begin();
+                //wake 1 ex wait
+            it->txn->_lock_ready=true;
+            _waiting_set.erase(it);
         }
     }
 #elif CC_ALG == WOUND_WAIT

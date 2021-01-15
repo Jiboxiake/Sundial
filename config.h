@@ -5,7 +5,7 @@
 
 // number of server threads on each node
 #define NUM_WORKER_THREADS              32//4096 //2048 //1024
-#define NUM_RPC_SERVER_THREADS          32
+#define NUM_RPC_SERVER_THREADS          8
 
 // only a limited number of active threads are allowed. This configuration is
 // effective only when LOG_ENABLE == true.
@@ -13,7 +13,7 @@
 #define MAX_NUM_ACTIVE_TXNS             32
 
 // WORKLOAD can be YCSB or TPCC
-#define WORKLOAD                        YCSB
+#define WORKLOAD                        TPCC
 
 // Statistics
 // ==========
