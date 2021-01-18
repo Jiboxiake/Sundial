@@ -4,16 +4,16 @@
 #define NUM_NODES                       2
 
 // number of server threads on each node
-#define NUM_WORKER_THREADS              32//4096 //2048 //1024
-#define NUM_RPC_SERVER_THREADS          8
+#define NUM_WORKER_THREADS              8//4096 //2048 //1024
+#define NUM_RPC_SERVER_THREADS          10
 
 // only a limited number of active threads are allowed. This configuration is
 // effective only when LOG_ENABLE == true.
 #define ENABLE_ADMISSION_CONTROL        false
-#define MAX_NUM_ACTIVE_TXNS             32
+#define MAX_NUM_ACTIVE_TXNS             8
 
 // WORKLOAD can be YCSB or TPCC
-#define WORKLOAD                        TPCC
+#define WORKLOAD                        YCSB
 
 // Statistics
 // ==========
@@ -26,7 +26,7 @@
 // Concurrency Control
 // ===================
 // Supported concurrency control algorithms: WAIT_DIE, NO_WAIT, TICTOC, F_ONE
-#define CC_ALG                          WAIT_DIE
+#define CC_ALG                          NO_WAIT
 
 #define ABORT_PENALTY                   10000000  // in nanoseconds
 

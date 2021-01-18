@@ -30,6 +30,7 @@ YCSBStoreProcedure::execute()
     QueryYCSB * query = (QueryYCSB *) _query;
     RequestYCSB * requests = query->get_requests();
     assert(_query);
+    _phase=0;
 #if SINGLE_PART_ONLY
     for ( ; _curr_query_id < query->get_request_count(); _curr_query_id ++) {
         RequestYCSB * req = &requests[ _curr_query_id ];
@@ -66,34 +67,11 @@ YCSBStoreProcedure::execute()
             RequestYCSB * req = &requests[i];
             uint32_t home_node = GET_WORKLOAD->key_to_node(req->key);
             if (home_node != g_node_id) {//need rewrite this part
-                uint32_t cc_specific_msg_size = 0;
-                char * cc_specific_msg_data = NULL;
                 rc=_txn->send_remote_read_request(home_node,req->key,index->get_index_id(),0,req->rtype);
                 if(rc!=RCOK){
                     return rc;
                 }
-              /*  rc = get_cc_manager()->register_remote_access(home_node, req->rtype, req->key, 0,
-                                                              cc_specific_msg_size, cc_specific_msg_data);*/
-                // if local data is not read, always send normal request to remote node.
-                // to support renew request, need to to indicate which tuple to renew in the message.
-            /*    if (rc == LOCAL_MISS || rc == SPECULATE) {
-                    if (rc == LOCAL_MISS) has_remote_req = true;
-                    else assert(REUSE_IF_NO_REMOTE);
-
-                    if (remote_requests.find(home_node) == remote_requests.end())
-                        remote_requests[home_node] = UnstructuredBuffer();
-                    // TODO. Ideally, we should send SQL or some other intermediate representation of the query over.
-                    // For now, we just send the message using the following format (RemoteQuery)
-                    //        | key | index_id | type | [optional] cc_specific_data |
-                    uint32_t index_id = 0;
-                    remote_requests[home_node].put( &req->key );
-                    remote_requests[home_node].put( &index_id );
-                    remote_requests[home_node].put( &req->rtype );
-                    if (cc_specific_msg_size > 0) {
-                        remote_requests[home_node].put( cc_specific_msg_data, cc_specific_msg_size );
-                        delete cc_specific_msg_data;
-                    }
-                }*/
+             
             }
         }
 

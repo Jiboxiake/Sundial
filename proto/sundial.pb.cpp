@@ -125,6 +125,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_sundial_2eproto::offsets[] PRO
   PROTOBUF_FIELD_OFFSET(::sundial_rpc::SundialRequest_ReadRequest, key_),
   PROTOBUF_FIELD_OFFSET(::sundial_rpc::SundialRequest_ReadRequest, index_id_),
   PROTOBUF_FIELD_OFFSET(::sundial_rpc::SundialRequest_ReadRequest, access_type_),
+  PROTOBUF_FIELD_OFFSET(::sundial_rpc::SundialRequest_ReadRequest, ts_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::sundial_rpc::SundialRequest_TupleData, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -163,10 +164,10 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_sundial_2eproto::offsets[] PRO
 };
 static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, sizeof(::sundial_rpc::SundialRequest_ReadRequest)},
-  { 8, -1, sizeof(::sundial_rpc::SundialRequest_TupleData)},
-  { 17, -1, sizeof(::sundial_rpc::SundialRequest)},
-  { 26, -1, sizeof(::sundial_rpc::SundialResponse_TupleData)},
-  { 35, -1, sizeof(::sundial_rpc::SundialResponse)},
+  { 9, -1, sizeof(::sundial_rpc::SundialRequest_TupleData)},
+  { 18, -1, sizeof(::sundial_rpc::SundialRequest)},
+  { 27, -1, sizeof(::sundial_rpc::SundialResponse_TupleData)},
+  { 36, -1, sizeof(::sundial_rpc::SundialResponse)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -178,31 +179,31 @@ static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] =
 };
 
 const char descriptor_table_protodef_sundial_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\rsundial.proto\022\013sundial_rpc\"\322\003\n\016Sundial"
+  "\n\rsundial.proto\022\013sundial_rpc\"\336\003\n\016Sundial"
   "Request\022\016\n\006txn_id\030\001 \001(\004\022=\n\014request_type\030"
   "\002 \001(\0162\'.sundial_rpc.SundialRequest.Reque"
   "stType\022>\n\rread_requests\030\003 \003(\0132\'.sundial_"
   "rpc.SundialRequest.ReadRequest\0229\n\ntuple_"
   "data\030\004 \003(\0132%.sundial_rpc.SundialRequest."
-  "TupleData\032A\n\013ReadRequest\022\013\n\003key\030\001 \001(\004\022\020\n"
-  "\010index_id\030\002 \001(\004\022\023\n\013access_type\030\003 \001(\004\032F\n\t"
-  "TupleData\022\013\n\003key\030\001 \001(\004\022\020\n\010table_id\030\002 \001(\004"
-  "\022\014\n\004size\030\003 \001(\004\022\014\n\004data\030\004 \001(\014\"k\n\013RequestT"
-  "ype\022\014\n\010READ_REQ\020\000\022\017\n\013PREPARE_REQ\020\001\022\016\n\nCO"
-  "MMIT_REQ\020\002\022\r\n\tABORT_REQ\020\003\022\013\n\007SYS_REQ\020\004\022\021"
-  "\n\rNUM_REQ_TYPES\020\005\"\371\002\n\017SundialResponse\022\016\n"
-  "\006txn_id\030\001 \001(\004\022@\n\rresponse_type\030\002 \001(\0162).s"
-  "undial_rpc.SundialResponse.ResponseType\022"
-  ":\n\ntuple_data\030\003 \003(\0132&.sundial_rpc.Sundia"
-  "lResponse.TupleData\032F\n\tTupleData\022\013\n\003key\030"
-  "\001 \001(\004\022\020\n\010table_id\030\002 \001(\004\022\014\n\004size\030\003 \001(\004\022\014\n"
-  "\004data\030\004 \001(\014\"\217\001\n\014ResponseType\022\013\n\007RESP_OK\020"
-  "\000\022\016\n\nRESP_ABORT\020\001\022\017\n\013PREPARED_OK\020\002\022\022\n\016PR"
-  "EPARED_OK_RO\020\003\022\022\n\016PREPARED_ABORT\020\004\022\007\n\003AC"
-  "K\020\005\022\014\n\010SYS_RESP\020\006\022\022\n\016NUM_RESP_TYPES\020\0072Z\n"
-  "\nSundialRPC\022L\n\rcontactRemote\022\033.sundial_r"
-  "pc.SundialRequest\032\034.sundial_rpc.SundialR"
-  "esponse\"\000b\006proto3"
+  "TupleData\032M\n\013ReadRequest\022\013\n\003key\030\001 \001(\004\022\020\n"
+  "\010index_id\030\002 \001(\004\022\023\n\013access_type\030\003 \001(\004\022\n\n\002"
+  "ts\030\004 \001(\004\032F\n\tTupleData\022\013\n\003key\030\001 \001(\004\022\020\n\010ta"
+  "ble_id\030\002 \001(\004\022\014\n\004size\030\003 \001(\004\022\014\n\004data\030\004 \001(\014"
+  "\"k\n\013RequestType\022\014\n\010READ_REQ\020\000\022\017\n\013PREPARE"
+  "_REQ\020\001\022\016\n\nCOMMIT_REQ\020\002\022\r\n\tABORT_REQ\020\003\022\013\n"
+  "\007SYS_REQ\020\004\022\021\n\rNUM_REQ_TYPES\020\005\"\371\002\n\017Sundia"
+  "lResponse\022\016\n\006txn_id\030\001 \001(\004\022@\n\rresponse_ty"
+  "pe\030\002 \001(\0162).sundial_rpc.SundialResponse.R"
+  "esponseType\022:\n\ntuple_data\030\003 \003(\0132&.sundia"
+  "l_rpc.SundialResponse.TupleData\032F\n\tTuple"
+  "Data\022\013\n\003key\030\001 \001(\004\022\020\n\010table_id\030\002 \001(\004\022\014\n\004s"
+  "ize\030\003 \001(\004\022\014\n\004data\030\004 \001(\014\"\217\001\n\014ResponseType"
+  "\022\013\n\007RESP_OK\020\000\022\016\n\nRESP_ABORT\020\001\022\017\n\013PREPARE"
+  "D_OK\020\002\022\022\n\016PREPARED_OK_RO\020\003\022\022\n\016PREPARED_A"
+  "BORT\020\004\022\007\n\003ACK\020\005\022\014\n\010SYS_RESP\020\006\022\022\n\016NUM_RES"
+  "P_TYPES\020\0072Z\n\nSundialRPC\022L\n\rcontactRemote"
+  "\022\033.sundial_rpc.SundialRequest\032\034.sundial_"
+  "rpc.SundialResponse\"\000b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_sundial_2eproto_deps[1] = {
 };
@@ -215,7 +216,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_sun
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_sundial_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_sundial_2eproto = {
-  false, false, descriptor_table_protodef_sundial_2eproto, "sundial.proto", 977,
+  false, false, descriptor_table_protodef_sundial_2eproto, "sundial.proto", 989,
   &descriptor_table_sundial_2eproto_once, descriptor_table_sundial_2eproto_sccs, descriptor_table_sundial_2eproto_deps, 5, 0,
   schemas, file_default_instances, TableStruct_sundial_2eproto::offsets,
   file_level_metadata_sundial_2eproto, 5, file_level_enum_descriptors_sundial_2eproto, file_level_service_descriptors_sundial_2eproto,
@@ -305,15 +306,15 @@ SundialRequest_ReadRequest::SundialRequest_ReadRequest(const SundialRequest_Read
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   ::memcpy(&key_, &from.key_,
-    static_cast<size_t>(reinterpret_cast<char*>(&access_type_) -
-    reinterpret_cast<char*>(&key_)) + sizeof(access_type_));
+    static_cast<size_t>(reinterpret_cast<char*>(&ts_) -
+    reinterpret_cast<char*>(&key_)) + sizeof(ts_));
   // @@protoc_insertion_point(copy_constructor:sundial_rpc.SundialRequest.ReadRequest)
 }
 
 void SundialRequest_ReadRequest::SharedCtor() {
   ::memset(&key_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&access_type_) -
-      reinterpret_cast<char*>(&key_)) + sizeof(access_type_));
+      reinterpret_cast<char*>(&ts_) -
+      reinterpret_cast<char*>(&key_)) + sizeof(ts_));
 }
 
 SundialRequest_ReadRequest::~SundialRequest_ReadRequest() {
@@ -348,8 +349,8 @@ void SundialRequest_ReadRequest::Clear() {
   (void) cached_has_bits;
 
   ::memset(&key_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&access_type_) -
-      reinterpret_cast<char*>(&key_)) + sizeof(access_type_));
+      reinterpret_cast<char*>(&ts_) -
+      reinterpret_cast<char*>(&key_)) + sizeof(ts_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -379,6 +380,13 @@ const char* SundialRequest_ReadRequest::_InternalParse(const char* ptr, ::PROTOB
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
           access_type_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint64 ts = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 32)) {
+          ts_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -428,6 +436,12 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(3, this->_internal_access_type(), target);
   }
 
+  // uint64 ts = 4;
+  if (this->ts() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(4, this->_internal_ts(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -463,6 +477,13 @@ size_t SundialRequest_ReadRequest::ByteSizeLong() const {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
         this->_internal_access_type());
+  }
+
+  // uint64 ts = 4;
+  if (this->ts() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
+        this->_internal_ts());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -505,6 +526,9 @@ void SundialRequest_ReadRequest::MergeFrom(const SundialRequest_ReadRequest& fro
   if (from.access_type() != 0) {
     _internal_set_access_type(from._internal_access_type());
   }
+  if (from.ts() != 0) {
+    _internal_set_ts(from._internal_ts());
+  }
 }
 
 void SundialRequest_ReadRequest::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -529,8 +553,8 @@ void SundialRequest_ReadRequest::InternalSwap(SundialRequest_ReadRequest* other)
   using std::swap;
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(SundialRequest_ReadRequest, access_type_)
-      + sizeof(SundialRequest_ReadRequest::access_type_)
+      PROTOBUF_FIELD_OFFSET(SundialRequest_ReadRequest, ts_)
+      + sizeof(SundialRequest_ReadRequest::ts_)
       - PROTOBUF_FIELD_OFFSET(SundialRequest_ReadRequest, key_)>(
           reinterpret_cast<char*>(&key_),
           reinterpret_cast<char*>(&other->key_));

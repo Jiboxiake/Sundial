@@ -48,6 +48,10 @@ TxnManager::TxnManager(QueryBase *query, WorkerThread *thread)
     log_semaphore = new SemaphoreSync();
     dependency_semaphore = new SemaphoreSync();
     rpc_semaphore = new SemaphoreSync();
+    #if CC_ALG==WOUND_WAIT||CC_ALG==WAIT_DIE
+    if(query!=NULL)
+    _ts=glob_manager->get_ts(GET_THD_ID);
+    #endif
 }
 
 TxnManager::~TxnManager()
@@ -187,7 +191,9 @@ RC TxnManager::start()
 {
     RC rc = RCOK;
     _txn_state = RUNNING;
+#if CC_ALG==WAIT_DIE||CC_ALG==WOUND_WAIT
     _lock_ready = true;
+#endif    
 #if CC_ALG == WOUND_WAIT
     pthread_mutex_init(&_latch, NULL);
     _protected = false;
@@ -336,6 +342,9 @@ RC TxnManager::send_remote_read_request(uint64_t node_id, uint64_t key, uint64_t
     SundialRequest::ReadRequest *read_request = request.add_read_requests();
     read_request->set_key(key);
     read_request->set_index_id(index_id);
+    #if CC_ALG==WAIT_DIE||CC_ALG==WOUND_WAIT
+    read_request->set_ts(_ts);
+    #endif
     read_request->set_access_type(access_type);
 
     rpc_client->sendRequest(node_id, request, response);
@@ -515,6 +524,10 @@ RC TxnManager::process_remote_request(const SundialRequest *request, SundialResp
         {
             uint64_t key = request->read_requests(i).key();
             uint64_t index_id = request->read_requests(i).index_id();
+            #if CC_ALG==WOUND_WAIT||CC_ALG==WAIT_DIE
+            uint64_t ts = request->read_requests(i).ts();
+            _ts=ts;
+            #endif
             access_t access_type = (access_t)request->read_requests(i).access_type();
 
             INDEX *index = GET_WORKLOAD->get_index(index_id);

@@ -90,7 +90,6 @@ SundialRPCServerImpl::processContactRemote(ServerContext* context, const Sundial
         response->set_response_type( SundialResponse::SYS_RESP );
         return; 
     }
-
     uint64_t txn_id = request->txn_id();
     TxnManager * txn_man = txn_table->get_txn(txn_id);
     // If no TxnManager exists for the requesting transaction, create one.

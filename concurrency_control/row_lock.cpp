@@ -13,7 +13,7 @@ bool Row_lock::Compare::operator()(const LockEntry &en1, const LockEntry &en2) c
     // returns true if the first argument goes before the second argument
     // begin(): txn with the largest ts (yongest)
     // end(): txn with the smallest ts (oldest)
-    return LOCK_MAN(en1.txn)->get_ts() > LOCK_MAN(en2.txn)->get_ts();
+    return en1.txn->_ts > en2.txn->_ts;
     //return true;
 }
 #endif
@@ -156,7 +156,7 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
                 rc = ABORT;
         }
         else{
-            assert(false);
+            //assert(false);
         }
     }
     else
@@ -185,10 +185,10 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
             {
                 std::set<LockEntry>::iterator end = _locking_set.end();
                 end--;
-                assert(LOCK_MAN(txn)->get_ts() >= LOCK_MAN(end->txn)->get_ts());
+                assert(txn->_ts>= end->txn->_ts);
                 assert(end->type==LOCK_SH);
                 //if the txn is older than the oldest lock holder,wait
-                if (LOCK_MAN(txn)->get_ts() == LOCK_MAN(end->txn)->get_ts())
+                if (txn->_ts== end->txn->_ts)
                 {
                     
                     while (_locking_set.size() != 1)
@@ -217,7 +217,7 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
             }
             //double check waiting set
             bool waited=false;
-            if(!_waiting_set.empty()&&LOCK_MAN(txn)->get_ts()<LOCK_MAN(_waiting_set.begin()->txn)->get_ts()){
+            if(!_waiting_set.empty()&&txn->_ts<_waiting_set.begin()->txn->_ts){
                 if(_locking_set.empty()){
                     assert(_locking_set.begin()->type==LOCK_EX);
                 }
@@ -234,9 +234,9 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
             std::set<LockEntry>::iterator end = _locking_set.end();
             end--;
             TxnManager* end_txn=end->txn;
-            assert(LOCK_MAN(txn)->get_ts()!=LOCK_MAN(end_txn)->get_ts());
+            assert(txn->_ts!=end->txn->_ts);
             //txn is older than the oldest lock holder, can wait
-            if(LOCK_MAN(txn)->get_ts()<LOCK_MAN(end_txn)->get_ts()){
+            if(txn->_ts<end_txn->_ts){
                 wait(type,txn);
                 waited=true;
             }else{
@@ -378,7 +378,7 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
             break;
         }
     }
-    assert(flag);
+    //assert(flag);
 #if CONTROLLED_LOCK_VIOLATION
     // NOTE
     // entry.txn can be NULL. This happens because Row_lock manager locates in
@@ -419,6 +419,7 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
     {
         if (it->txn == txn)
         {
+            assert(it->txn->get_txn_id()==txn->get_txn_id());
             //entry = *it;
             //printf("found\n");
             _locking_set.erase(it);

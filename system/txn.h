@@ -37,8 +37,10 @@ public:
 
     // rerun previously aborted transactions
     RC restart();
-    int               txn_type;
+    #if CC_ALG==WOUND_WAIT || CC_ALG==WAIT_DIE
     bool _lock_ready;
+    uint64_t _ts;
+    #endif
     #if CC_ALG==WOUND_WAIT
     bool _protected;
     bool killed;

@@ -20,7 +20,7 @@ LockManager::LockManager(TxnManager * txn)
     _num_lock_waits = 0;
 #if CC_ALG == WAIT_DIE ||CC_ALG==WOUND_WAIT
     assert(g_ts_alloc == TS_CLOCK);
-    _timestamp = glob_manager->get_ts(GET_THD_ID);
+    //_timestamp = glob_manager->get_ts(GET_THD_ID); 
 #endif
 #if WORKLOAD == TPCC
     _access_set.reserve(128);
