@@ -24,7 +24,7 @@ bool Row_lock::Compare::operator()(const LockEntry &en1, const LockEntry &en2) c
     // returns true if the first argument goes before the second argument
     // begin(): txn with the smallest ts (oldest)
     // end(): txn with the largest ts (youngest)
-    return LOCK_MAN(en1.txn)->get_ts() < LOCK_MAN(en2.txn)->get_ts();
+    return en1.txn->_ts < en2.txn->_ts;
     //return true;
 }
 #endif
@@ -83,7 +83,7 @@ RC Row_lock::promote_wait()
     {
         return RCOK;
     }
-    if (_locking_set.empty() || !conflict_lock(_waiting_set.begin()->type, _locking_set.begin()->type) || LOCK_MAN(_waiting_set.begin()->txn)->get_ts() <= LOCK_MAN(_locking_set.begin()->txn)->get_ts())
+    if (_locking_set.empty() || !conflict_lock(_waiting_set.begin()->type, _locking_set.begin()->type) || _waiting_set.begin()->txn->_ts <= _locking_set.begin()->txn->_ts)
     {
         std::set<LockEntry>::iterator head = _waiting_set.begin();
         head->txn->_lock_ready = true;
@@ -307,7 +307,7 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
                 has_conflict = true;
                 txn->_lock_ready = false;
             }
-            if (has_conflict && LOCK_MAN(txn)->get_ts() < LOCK_MAN(it->txn)->get_ts())
+            if (has_conflict && txn->_ts < it->txn->_ts)
             {
                 //if trying to kill a committing transaction, abort yourself
                 it->txn->latch();
