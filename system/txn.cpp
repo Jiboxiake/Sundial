@@ -209,6 +209,7 @@ RC TxnManager::start()
     unlatch();
     if(is_killed()){
         rc=ABORT;
+        _protected=false;
     }
     #endif
     // Handle single-partition transactions
@@ -348,26 +349,20 @@ RC TxnManager::send_remote_read_request(uint64_t node_id, uint64_t key, uint64_t
     read_request->set_access_type(access_type);
 
     rpc_client->sendRequest(node_id, request, response);
-    RC rc=RCOK;
+
     // handle RPC response
     assert(response.response_type() == SundialResponse::RESP_OK || response.response_type() == SundialResponse::RESP_ABORT);
     if (response.response_type() == SundialResponse::RESP_OK)
     {
         ((LockManager *)_cc_manager)->process_remote_read_response(node_id, access_type, response);
-        rc= RCOK;
+        return RCOK;
     }
     else
     {
         _remote_nodes_involved[node_id]->state = ABORTED;
         _is_remote_abort = true;
-        rc= ABORT;
+        return ABORT;
     }
-    #if CC_ALG==WOUND_WAIT
-    if(is_killed()){
-        rc=ABORT;
-    }
-    #endif
-    return rc;
 }
 
 RC TxnManager::process_2pc_phase1()
