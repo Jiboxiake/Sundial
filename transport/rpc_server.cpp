@@ -91,6 +91,11 @@ SundialRPCServerImpl::processContactRemote(ServerContext* context, const Sundial
         return; 
     }
     uint64_t txn_id = request->txn_id();
+    //assert(txn_id!=0);
+   /* if(txn_id==0){
+        printf();
+        assert(false);
+    }*/
     TxnManager * txn_man = txn_table->get_txn(txn_id);
     // If no TxnManager exists for the requesting transaction, create one.
     if (txn_man == NULL) {
@@ -101,7 +106,17 @@ SundialRPCServerImpl::processContactRemote(ServerContext* context, const Sundial
         txn_table->add_txn( txn_man );
     }
     // the transaction handles the RPC call
+  /*  if(request->request_type()==SundialRequest::READ_REQ){
+        printf("about to process txn %d with read request\n",txn_id);
+    }else if(request->request_type()==SundialRequest::PREPARE_REQ){
+        printf("about to process txn %d with prepare request\n",txn_id);
+    }else if(request->request_type()==SundialRequest::COMMIT_REQ||request->request_type()==SundialRequest::ABORT_REQ){
+        printf("about to process txn %d with commit/abort request\n",txn_id);
+    }*/
     txn_man->process_remote_request(request, response);
+    if(txn_id==0){
+        printf("error\n");
+    }
     response->set_txn_id(txn_id);
 
     // if the sub-transaction is no longer required, remove from txn_table

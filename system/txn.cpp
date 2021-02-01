@@ -49,8 +49,18 @@ TxnManager::TxnManager(QueryBase *query, WorkerThread *thread)
     dependency_semaphore = new SemaphoreSync();
     rpc_semaphore = new SemaphoreSync();
     #if CC_ALG==WOUND_WAIT||CC_ALG==WAIT_DIE
+    _lock_ready=true;
     if(query!=NULL)
     _ts=glob_manager->get_ts(GET_THD_ID);
+    else
+    {
+        _ts=0;
+    }
+    #endif
+    #if CC_ALG==WOUND_WAIT
+    pthread_mutex_init(&_latch, NULL);
+    _protected=false;
+    killed=false;
     #endif
 }
 
@@ -195,7 +205,6 @@ RC TxnManager::start()
     _lock_ready = true;
 #endif    
 #if CC_ALG == WOUND_WAIT
-    pthread_mutex_init(&_latch, NULL);
     _protected = false;
     killed = false;
 #endif
@@ -209,7 +218,6 @@ RC TxnManager::start()
     unlatch();
     if(is_killed()){
         rc=ABORT;
-        _protected=false;
     }
     #endif
     // Handle single-partition transactions
@@ -339,7 +347,7 @@ RC TxnManager::send_remote_read_request(uint64_t node_id, uint64_t key, uint64_t
     response.Clear();
     request.set_txn_id(get_txn_id());
     request.set_request_type(SundialRequest::READ_REQ);
-
+    assert(request.txn_id()!=0);
     SundialRequest::ReadRequest *read_request = request.add_read_requests();
     read_request->set_key(key);
     read_request->set_index_id(index_id);
@@ -402,6 +410,7 @@ RC TxnManager::process_2pc_phase1()
         request.Clear();
         response.Clear();
         request.set_txn_id(get_txn_id());
+        assert(request.txn_id()!=0);
         request.set_request_type(SundialRequest::PREPARE_REQ);
 
         ((LockManager *)_cc_manager)->build_prepare_req(it->first, request);
@@ -527,7 +536,9 @@ RC TxnManager::process_remote_request(const SundialRequest *request, SundialResp
             uint64_t index_id = request->read_requests(i).index_id();
             #if CC_ALG==WOUND_WAIT||CC_ALG==WAIT_DIE
             uint64_t ts = request->read_requests(i).ts();
-            _ts=ts;
+            if(_ts==0){
+                _ts=ts;
+            }
             #endif
             access_t access_type = (access_t)request->read_requests(i).access_type();
 
@@ -554,6 +565,7 @@ RC TxnManager::process_remote_request(const SundialRequest *request, SundialResp
             SundialResponse::TupleData *tuple = response->add_tuple_data();
             uint64_t tuple_size = row->get_tuple_size();
             tuple->set_key(key);
+            //printf("response adds key %d\n",key);
             tuple->set_table_id(table_id);
             tuple->set_size(tuple_size);
             tuple->set_data(get_cc_manager()->get_data(key, table_id), tuple_size);
@@ -567,6 +579,18 @@ RC TxnManager::process_remote_request(const SundialRequest *request, SundialResp
             response->set_response_type(SundialResponse::RESP_OK);
         return rc;
     case SundialRequest::PREPARE_REQ:
+    #if CC_ALG==WOUND_WAIT
+        latch();
+        protect();
+        unlatch();
+        if(is_killed()){
+            rc=ABORT;
+            _txn_state =ABORTED;
+            _cc_manager->cleanup(rc);
+            response->set_response_type(SundialResponse::PREPARED_ABORT);
+            return rc;
+        }
+    #endif
         // copy data to the write set.
         num_tuples = request->tuple_data_size();
         for (uint32_t i = 0; i < num_tuples; i++)

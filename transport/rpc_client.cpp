@@ -55,6 +55,7 @@ SundialRPCClient::AsyncCompleteRpc(SundialRPCClient * s) {
 
 void
 SundialRPCClient::sendRequest(uint64_t node_id, SundialRequest &request, SundialResponse &response) {
+    //assert(request.txn_id()!=0);
     ClientContext context;
     glob_stats->_stats[GET_THD_ID]->_req_msg_count[ request.request_type() ] ++;
     glob_stats->_stats[GET_THD_ID]->_req_msg_size[ request.request_type() ] += request.SpaceUsedLong();
@@ -74,7 +75,7 @@ SundialRPCClient::sendRequestAsync(TxnManager * txn, uint64_t node_id,
 {    
     assert(node_id != g_node_id);
     // call object to store rpc data
-    AsyncClientCall* call = new AsyncClientCall;;
+    AsyncClientCall* call = new AsyncClientCall;
     //printf("[REQ] client send to node %ld. type=%s\n", node_id,
     //       SundialRequest::RequestType_Name(request.request_type()).c_str());
     assert(node_id != g_node_id);
@@ -89,6 +90,7 @@ SundialRPCClient::sendRequestAsync(TxnManager * txn, uint64_t node_id,
     call->response_reader->StartCall();
     call->reply = &response;
     call->response_reader->Finish(call->reply, &(call->status), (void*)call);
+    assert(request.txn_id()!=0);
 }
 
 

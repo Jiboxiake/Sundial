@@ -302,6 +302,7 @@ void
 LockManager::process_remote_read_response(uint32_t node_id, access_t type, SundialResponse &response)
 {
     assert(response.response_type() == SundialResponse::RESP_OK);
+    assert(response.txn_id()!=0);
     for (int i = 0; i < response.tuple_data_size(); i ++) {
         AccessLock ac;
         _remote_set.push_back(ac);

@@ -270,10 +270,12 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
         }
         return RCOK;
     }
+    bool killed_someone=false;
     //may need optimization, do we want to actively remove transactions or let them know they need to abort and release the lock
     //we also want to know if we want to kill transactions even though we have to wait first
     while (!_locking_set.empty() && conflict_lock(_locking_set.begin()->type, type))
     {
+        uint64_t wait_who=0;
         if (txn->is_killed())
         {
             if (need_latch)
@@ -304,7 +306,11 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
                 assert(it->txn->is_killed());       
                 it->txn->unlatch();
                 _locking_set.erase(it);
+                killed_someone=true;
             }else if(txn->_ts > it->txn->_ts){
+                if(wait_who==0){
+                    wait_who=it->txn->get_txn_id();
+                }
                 need_wait=true;
                 txn->_lock_ready=false;
             }
@@ -343,8 +349,18 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
         }
         if (txn->is_killed())
         {
+            if(need_wait){
+                for (std::set<LockEntry>::iterator it = _waiting_set.begin(); it != _waiting_set.end(); it++){
+                    if(it->txn==txn){
+                        _waiting_set.erase(it);
+                        break;
+                    }
+                }
+            }
+            promote_wait();
             if (need_latch)
                 unlatch();
+
             return ABORT;
         }
     }
@@ -483,13 +499,14 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
         {
             _locking_set.erase(it);
             flag = 1;
+            promote_wait();
             break;
         }
     }
     if(!flag){
         assert(txn->is_killed());
     }
-    promote_wait();
+    //promote_wait();
     /*LockEntry entry {LOCK_NONE, NULL};
     // remove from locking set
     for (std::set<LockEntry>::iterator it = _locking_set.begin();

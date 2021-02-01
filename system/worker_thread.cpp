@@ -49,7 +49,7 @@ RC WorkerThread::run() {
 
     uint64_t init_time = get_sys_clock();
     // calculate which client thread this worker thread corresponds to.
-    uint64_t max_txn_id = 0;
+    uint64_t max_txn_id = 1;
 
     uint64_t last_stats_cp_time = init_time;
     __attribute__((unused)) uint64_t last_idle_time = get_sys_clock();
@@ -84,7 +84,7 @@ RC WorkerThread::run() {
             uint64_t txn_id = max_txn_id ++;
             txn_id = txn_id * g_num_worker_threads + _thd_id;
             txn_id = txn_id * g_num_nodes + g_node_id;
-
+            //assert(txn_id!=0);
             _native_txn = new TxnManager(query, this);
             _native_txn->set_txn_id( txn_id );
             txn_table->add_txn( _native_txn );

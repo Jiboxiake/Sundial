@@ -62,15 +62,16 @@ YCSBStoreProcedure::execute()
     // Phase 2: after all data is acquired, finish the rest of the transaction.
     if (_phase == 0) {
         // for each request, if it touches a remote node, add it to a remote query.
-        bool has_remote_req = false;
         for (uint32_t i = 0; i < query->get_request_count(); i ++) {
             RequestYCSB * req = &requests[i];
             uint32_t home_node = GET_WORKLOAD->key_to_node(req->key);
             if (home_node != g_node_id) {//need rewrite this part
+               // printf("send remote key %d\n",req->key);
                 rc=_txn->send_remote_read_request(home_node,req->key,index->get_index_id(),0,req->rtype);
                 if(rc!=RCOK){
                     return rc;
                 }
+               // printf("get remote key %d\n",req->key);
              
             }
         }
