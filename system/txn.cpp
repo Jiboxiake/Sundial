@@ -218,6 +218,7 @@ RC TxnManager::start()
     unlatch();
     if(is_killed()){
         rc=ABORT;
+        _protected=false;
     }
     #endif
     // Handle single-partition transactions
@@ -352,6 +353,7 @@ RC TxnManager::send_remote_read_request(uint64_t node_id, uint64_t key, uint64_t
     read_request->set_key(key);
     read_request->set_index_id(index_id);
     #if CC_ALG==WAIT_DIE||CC_ALG==WOUND_WAIT
+    assert(_ts!=0);
     read_request->set_ts(_ts);
     #endif
     read_request->set_access_type(access_type);
@@ -585,6 +587,7 @@ RC TxnManager::process_remote_request(const SundialRequest *request, SundialResp
         unlatch();
         if(is_killed()){
             rc=ABORT;
+            _protected=false;
             _txn_state =ABORTED;
             _cc_manager->cleanup(rc);
             response->set_response_type(SundialResponse::PREPARED_ABORT);
@@ -630,6 +633,11 @@ RC TxnManager::process_remote_request(const SundialRequest *request, SundialResp
         dependency_semaphore->wait();
         rc = (request->request_type() == SundialRequest::COMMIT_REQ) ? COMMIT : ABORT;
         _txn_state = (rc == COMMIT) ? COMMITTED : ABORTED;
+        #if CC_ALG==WOUND_WAIT
+        if(rc==COMMIT){
+            assert(is_protected());
+        }
+        #endif
         _cc_manager->cleanup(rc);
         // OPTIMIZATION: release locks as early as possible.
         // No need to wait for this log since it is optional (shared log

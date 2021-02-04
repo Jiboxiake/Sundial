@@ -1,7 +1,7 @@
 #pragma once
 
-#define DISTRIBUTED                     true
-#define NUM_NODES                       2
+#define DISTRIBUTED                     false
+#define NUM_NODES                       1
 
 // number of server threads on each node
 #define NUM_WORKER_THREADS              64//4096 //2048 //1024
@@ -10,7 +10,7 @@
 // only a limited number of active threads are allowed. This configuration is
 // effective only when LOG_ENABLE == true.
 #define ENABLE_ADMISSION_CONTROL        false
-#define MAX_NUM_ACTIVE_TXNS             64
+#define MAX_NUM_ACTIVE_TXNS             2
 
 // WORKLOAD can be YCSB or TPCC
 #define WORKLOAD                        YCSB
@@ -101,10 +101,10 @@
 // [YCSB]
 // Number of tuples per node
 #define SYNTH_TABLE_SIZE                (1024 * 10) // * 1024)
-#define ZIPF_THETA                      0.6
-#define READ_PERC                       0.8
+#define ZIPF_THETA                      0.2
+#define READ_PERC                       0.6
 #define PERC_READONLY_DATA              0
-#define PERC_REMOTE                     0.4
+#define PERC_REMOTE                     0
 #define SINGLE_PART_ONLY                false // access single partition only
 #define REQ_PER_QUERY                   16
 #define THINK_TIME                      0  // in us

@@ -102,6 +102,9 @@ SundialRPCServerImpl::processContactRemote(ServerContext* context, const Sundial
         //printf("adding txnID=%ld into txn_table\n", txn_id);
         assert( request->request_type() == SundialRequest::READ_REQ );
         txn_man = new TxnManager();
+        #if CC_ALG==WOUND_WAIT ||CC_ALG==WAIT_DIE
+        assert(txn_man->_ts==0);
+        #endif
         txn_man->set_txn_id( txn_id );
         txn_table->add_txn( txn_man );
     }
