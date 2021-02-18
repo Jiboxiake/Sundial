@@ -101,6 +101,24 @@ void TxnManager::unlatch()
 }
 #endif
 
+void TxnManager::set_wait_time(uint64_t time){
+     INC_FLOAT_STATS(waiting_time, time);
+}
+void TxnManager::set_multiple_loop_check(){
+    INC_INT_STATS(num_multiple_loop_check,1);
+}
+void TxnManager::set_txn_run_time(uint64_t time){
+    INC_FLOAT_STATS(txn_run_time,time);
+}
+void TxnManager::set_row_lock_get_time(uint64_t time){
+    INC_FLOAT_STATS(row_lock_get_time,time);
+}
+void TxnManager::set_row_lock_access(){
+    INC_INT_STATS(num_row_lock_access,1);
+}
+void TxnManager::increase_wait_count(){
+    INC_INT_STATS(num_waits,1);
+}
 void TxnManager::update_stats()
 {
     _finish_time = get_sys_clock();
@@ -199,6 +217,7 @@ RC TxnManager::restart()
 
 RC TxnManager::start()
 {
+    uint64_t start_time = get_sys_clock();
     RC rc = RCOK;
     _txn_state = RUNNING;
 #if CC_ALG==WAIT_DIE||CC_ALG==WOUND_WAIT
@@ -239,6 +258,8 @@ RC TxnManager::start()
             rc = process_2pc_phase2(rc);
         }
     }
+    uint64_t end_time =get_sys_clock();
+    set_txn_run_time(end_time-start_time);
     update_stats();
     return rc;
 }
@@ -251,7 +272,6 @@ RC TxnManager::process_commit_phase_singlepart(RC rc)
     }
     else if (rc == ABORT)
     {
-        rc = ABORT;
         _txn_state = ABORTING;
         _store_procedure->txn_abort();
     }

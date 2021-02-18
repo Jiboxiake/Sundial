@@ -68,10 +68,14 @@ void Row_lock::wait(LockType type, TxnManager *txn)
     txn->_lock_ready = false;
     _waiting_set.insert(LockEntry{type, txn});
     unlatch();
+    uint64_t start_wait_time = get_sys_clock();
     while (!txn->_lock_ready)
     {
         //spin wait
     }
+    uint64_t end_wait_time = get_sys_clock();
+    uint64_t wait_time = end_wait_time - start_wait_time;
+    txn->set_wait_time(wait_time);
     latch();
 }
 #endif
@@ -83,7 +87,7 @@ RC Row_lock::promote_wait()
     {
         return RCOK;
     }
-    if (_locking_set.empty() || !conflict_lock(_waiting_set.begin()->type, _locking_set.begin()->type) || (_waiting_set.begin()->txn->_ts<=_locking_set.begin()->txn->_ts))
+    if (_locking_set.empty() || !conflict_lock(_waiting_set.begin()->type, _locking_set.begin()->type) || (_waiting_set.begin()->txn->_ts <= _locking_set.begin()->txn->_ts))
     {
         std::set<LockEntry>::iterator head = _waiting_set.begin();
         head->txn->_lock_ready = true;
@@ -118,6 +122,8 @@ RC Row_lock::promote_multiple()
 
 RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
 {
+    uint64_t start_time=get_sys_clock();
+    txn->set_row_lock_access();
     RC rc = RCOK;
     //printf("grabing lock %p \n",this);
     if (txn == NULL)
@@ -155,7 +161,8 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
             else
                 rc = ABORT;
         }
-        else{
+        else
+        {
             //assert(false);
         }
     }
@@ -185,68 +192,79 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
             {
                 std::set<LockEntry>::iterator end = _locking_set.end();
                 end--;
-                assert(txn->_ts>= end->txn->_ts);
-                assert(end->type==LOCK_SH);
+                assert(txn->_ts >= end->txn->_ts);
+                assert(end->type == LOCK_SH);
                 //if the txn is older than the oldest lock holder,wait
-                if (txn->_ts== end->txn->_ts)
+                if (txn->_ts == end->txn->_ts)
                 {
-                    
+
                     while (_locking_set.size() != 1)
                     {
-                        wait(type,txn);
+                        wait(type, txn);
                     }
                     assert(_locking_set.begin()->txn == txn);
                     entry->type = type;
                 }
                 else
                 {
-                    rc=ABORT;
+                    rc = ABORT;
                 }
-            }
-        }  
-    }
-    else
-    { 
-        if (_locking_set.empty() || !conflict_lock(type, _locking_set.begin()->type))
-        {
-            if(_locking_set.size()==1){
-            std::set<LockEntry>::iterator begin = _locking_set.begin();
-            std::set<LockEntry>::iterator end = _locking_set.end();
-            end--;
-            assert (begin==end);
-            }
-            //double check waiting set
-            bool waited=false;
-            if(!_waiting_set.empty()&&txn->_ts<_waiting_set.begin()->txn->_ts){
-                if(_locking_set.empty()){
-                    assert(_locking_set.begin()->type==LOCK_EX);
-                }
-                wait(type,txn);
-                waited=true;
-            }
-            if(waited){
-               rc=lock_get(type,txn,false);
-            }else{
-                _locking_set.insert(LockEntry{type, txn});
-            }
-        }else{
-            bool waited=false;
-            std::set<LockEntry>::iterator end = _locking_set.end();
-            end--;
-            TxnManager* end_txn=end->txn;
-            assert(txn->_ts!=end->txn->_ts);
-            //txn is older than the oldest lock holder, can wait
-            if(txn->_ts<end_txn->_ts){
-                wait(type,txn);
-                waited=true;
-            }else{
-                rc=ABORT;
-            }
-            if(waited){
-                rc=lock_get(type,txn,false);
             }
         }
-        
+    }
+    else
+    {
+        if (_locking_set.empty() || !conflict_lock(type, _locking_set.begin()->type))
+        {
+            if (_locking_set.size() == 1)
+            {
+                std::set<LockEntry>::iterator begin = _locking_set.begin();
+                std::set<LockEntry>::iterator end = _locking_set.end();
+                end--;
+                assert(begin == end);
+            }
+            //double check waiting set
+            bool waited = false;
+            if (!_waiting_set.empty() && txn->_ts < _waiting_set.begin()->txn->_ts)
+            {
+                if (_locking_set.empty())
+                {
+                    assert(_locking_set.begin()->type == LOCK_EX);
+                }
+                wait(type, txn);
+                waited = true;
+            }
+            if (waited)
+            {
+                rc = lock_get(type, txn, false);
+            }
+            else
+            {
+                _locking_set.insert(LockEntry{type, txn});
+            }
+        }
+        else
+        {
+            bool waited = false;
+            std::set<LockEntry>::iterator end = _locking_set.end();
+            end--;
+            TxnManager *end_txn = end->txn;
+            assert(txn->_ts != end->txn->_ts);
+            //txn is older than the oldest lock holder, can wait
+            if (txn->_ts < end_txn->_ts)
+            {
+                wait(type, txn);
+                waited = true;
+            }
+            else
+            {
+                rc = ABORT;
+            }
+            if (waited)
+            {
+                rc = lock_get(type, txn, false);
+            }
+        }
     }
 
 #elif CC_ALG == WOUND_WAIT
@@ -255,11 +273,10 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
         //printf("abort 1\n");
         if (need_latch)
             unlatch();
+        txn->set_row_lock_get_time(get_sys_clock()-start_time);    
         return ABORT;
     }
     LockEntry entry = LockEntry{type, txn};
-    pthread_cond_t local_cv;
-    entry.cv = &local_cv;
     ///two situations you can just grab the lock
     if (_locking_set.size() == 0)
     {
@@ -268,51 +285,55 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
         {
             unlatch();
         }
+        //assert(_waiting_set.empty());
+        txn->set_row_lock_get_time(get_sys_clock()-start_time); 
         return RCOK;
     }
-    bool killed_someone=false;
+    bool need_wait = false;
+    int counter=0;
     //may need optimization, do we want to actively remove transactions or let them know they need to abort and release the lock
     //we also want to know if we want to kill transactions even though we have to wait first
     while (!_locking_set.empty() && conflict_lock(_locking_set.begin()->type, type))
     {
-        uint64_t wait_who=0;
+        counter++;
         if (txn->is_killed())
         {
             if (need_latch)
                 unlatch();
+            txn->set_row_lock_get_time(get_sys_clock()-start_time);     
             return ABORT;
         }
-        
-        bool need_wait=false;
-        for (std::set<LockEntry>::iterator it = _locking_set.begin();
-             it != _locking_set.end(); it++)
+        need_wait = false;
+        if (_locking_set.begin()->txn->_ts < txn->_ts)
         {
-            if (txn->_ts < it->txn->_ts)
+            need_wait = true;
+            txn->_lock_ready = false;
+        }
+        else
+        {
+            for (std::set<LockEntry>::iterator it = _locking_set.begin();
+                 it != _locking_set.end(); it++)
             {
-                //if trying to kill a committing transaction, abort yourself
-                //printf("txn %d tries to kill txn %d\n",txn->get_txn_id(),it->txn->get_txn_id());
-                it->txn->latch();
-                if (it->txn->is_protected())
+                if (txn->_ts != it->txn->_ts)
                 {
-                    it->txn->unlatch();
-                    if (need_latch)
-                    {
-                        unlatch();
-                    }
+                    //if trying to kill a committing transaction, abort yourself
 
-                    return ABORT;
+                    it->txn->latch();
+                    if (it->txn->is_protected())
+                    {
+                        it->txn->unlatch();
+                        if (need_latch)
+                        {
+                            unlatch();
+                        }
+                        txn->set_row_lock_get_time(get_sys_clock()-start_time); 
+                        return ABORT;
+                    }
+                    it->txn->wound();
+                    assert(it->txn->is_killed());
+                    it->txn->unlatch();
+                    _locking_set.erase(it);
                 }
-                it->txn->wound();
-                assert(it->txn->is_killed());       
-                it->txn->unlatch();
-                _locking_set.erase(it);
-                killed_someone=true;
-            }else if(txn->_ts > it->txn->_ts){
-                if(wait_who==0){
-                    wait_who=it->txn->get_txn_id();
-                }
-                need_wait=true;
-                txn->_lock_ready=false;
             }
         }
         if (_locking_set.size() == 1)
@@ -325,11 +346,12 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
                 _locking_set.erase(head);
                 _locking_set.insert(entry);
                 assert(_locking_set.size() == 1);
-                assert(_locking_set.begin()->txn==txn);
+                assert(_locking_set.begin()->txn == txn);
                 if (need_latch)
                 {
                     unlatch();
                 }
+                txn->set_row_lock_get_time(get_sys_clock()-start_time); 
                 return RCOK;
             }
         }
@@ -337,21 +359,26 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
         {
             _waiting_set.insert(entry);
             unlatch();
-
+            uint64_t start_wait_time = get_sys_clock();
             //wait till conflicting ones release the lock
+            txn->increase_wait_count();
             while ((!txn->_lock_ready) && (!txn->is_killed()))
             {
                 //just wait bro
             }
 
+            txn->set_wait_time(get_sys_clock()-start_wait_time);
             //printf("get out of wait\n");
             latch();
         }
         if (txn->is_killed())
         {
-            if(need_wait){
-                for (std::set<LockEntry>::iterator it = _waiting_set.begin(); it != _waiting_set.end(); it++){
-                    if(it->txn==txn){
+            if (need_wait)
+            {
+                for (std::set<LockEntry>::iterator it = _waiting_set.begin(); it != _waiting_set.end(); it++)
+                {
+                    if (it->txn == txn)
+                    {
                         _waiting_set.erase(it);
                         break;
                     }
@@ -360,9 +387,12 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
             promote_wait();
             if (need_latch)
                 unlatch();
-
+            txn->set_row_lock_get_time(get_sys_clock()-start_time); 
             return ABORT;
         }
+    }
+    if(counter>1){
+        txn->set_multiple_loop_check();
     }
     _locking_set.insert(entry);
     assert(!_locking_set.empty());
@@ -371,6 +401,7 @@ RC Row_lock::lock_get(LockType type, TxnManager *txn, bool need_latch)
 #endif
     if (need_latch)
         unlatch();
+    txn->set_row_lock_get_time(get_sys_clock()-start_time);     
     return rc;
 }
 
@@ -437,7 +468,7 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
     {
         if (it->txn == txn)
         {
-            assert(it->txn->get_txn_id()==txn->get_txn_id());
+            assert(it->txn->get_txn_id() == txn->get_txn_id());
             //entry = *it;
             //printf("found\n");
             _locking_set.erase(it);
@@ -461,7 +492,7 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
             {
                 std::set<LockEntry>::iterator it = _waiting_set.begin();
                 //wake 1 ex wait
-                it->txn->_lock_ready=true;
+                it->txn->_lock_ready = true;
                 _waiting_set.erase(it);
             } //all we can wake up multiple SH lock threads
             else if (_waiting_set.begin()->type == LOCK_SH)
@@ -470,7 +501,7 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
                 {
                     if (it->type == LOCK_SH)
                     {
-                        it->txn->_lock_ready=true;
+                        it->txn->_lock_ready = true;
                         _waiting_set.erase(it);
                         //printf("return is %d\n",o);
                     }
@@ -480,11 +511,13 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
                     }
                 }
             }
-        }else if(_locking_set.size()==1&&_locking_set.begin()->txn==_waiting_set.begin()->txn){
-            assert(_locking_set.begin()->type==LOCK_SH&&_waiting_set.begin()->type==LOCK_EX);
+        }
+        else if (_locking_set.size() == 1 && _locking_set.begin()->txn == _waiting_set.begin()->txn)
+        {
+            assert(_locking_set.begin()->type == LOCK_SH && _waiting_set.begin()->type == LOCK_EX);
             std::set<LockEntry>::iterator it = _waiting_set.begin();
-                //wake 1 ex wait
-            it->txn->_lock_ready=true;
+            //wake 1 ex wait
+            it->txn->_lock_ready = true;
             _waiting_set.erase(it);
         }
     }
@@ -503,7 +536,8 @@ RC Row_lock::lock_release(TxnManager *txn, RC rc)
             break;
         }
     }
-    if(!flag){
+    if (!flag)
+    {
         assert(txn->is_killed());
     }
     //promote_wait();

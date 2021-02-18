@@ -57,7 +57,13 @@ public:
 
     void              set_txn_id(uint64_t txn_id) { _txn_id = txn_id; }
     uint64_t          get_txn_id()          { return _txn_id; }
-    bool              is_read_only()        { return _is_read_only; }   
+    bool              is_read_only()        { return _is_read_only; }
+    void              set_wait_time(uint64_t time);
+    void              set_row_lock_access();
+    void              set_row_lock_get_time(uint64_t time);
+    void              set_multiple_loop_check();
+    void              increase_wait_count();
+    void              set_txn_run_time(uint64_t time);   
     void              set_read_only(bool readonly) { _is_read_only = readonly; }
     bool              is_single_partition() { return _is_single_partition; } 
     

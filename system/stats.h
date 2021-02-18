@@ -42,8 +42,8 @@ enum StatsFloat {
     STAT_time_input_idle,
 
     // Logging thread
-    STAT_logging_send_time,
-    STAT_logging_commit_time,
+    STAT_txn_run_time,
+    STAT_waiting_time,
 
     // txn lifetime breakdown
     STAT_single_part_execute_phase,
@@ -58,7 +58,7 @@ enum StatsFloat {
     STAT_multi_part_commit_phase,
     STAT_multi_part_abort,
 
-    STAT_log_ready_time,
+    STAT_row_lock_get_time,
     STAT_dependency_ready_time,
 
     STAT_row,
@@ -95,9 +95,9 @@ enum StatsInt {
     STAT_num_aborts_remote,
 
     // Logging
-    STAT_log_num,
+    STAT_num_row_lock_access,
 
-    STAT_num_renewals,
+    STAT_num_multiple_loop_check,
     STAT_num_no_need_to_renewal,
 
     // For local caching
@@ -230,9 +230,9 @@ public:
         "time_write_queue",
         "time_input_idle",
 
-        // Logging thread
-        "logging_send_time",
-        "logging_commit_time",
+        // txn time
+        "txn_run_time",
+        "waiting_time",
 
         // txn lifetime breakdown
         "single_part_execute_phase",
@@ -247,7 +247,7 @@ public:
         "multi_part_commit_phase",
         "multi_part_abort",
 
-        "log_ready_time",
+        "row_lock_get_time",
         "dependency_ready_time",
 
         "CC (row)",
@@ -281,10 +281,10 @@ public:
         "num_aborts_local",
         "num_aborts_remote",
 
-        // Logging
-        "log_num",
+        // locking stats
+        "num_row_lock_access",
 
-        "num_renewals",
+        "num_multiple_loop_check",
         "num_no_need_to_renewal",
 
         // For local caching

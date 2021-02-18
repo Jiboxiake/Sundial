@@ -38,12 +38,9 @@ protected:
         LockType type;
         TxnManager * txn;
         //pthread_mutex_t mutex;
-        pthread_cond_t* cv;
     };
-    RC              wait_die_check(LockEntry* entry,LockType type, bool has_sh);
     RC              promote_wait();
     RC              promote_multiple();
-    RC              wound_wait_check(LockEntry* entry,LockType type, bool has_sh, bool wait_flag);
     #define LOCK_MAN(txn) ((LockManager *) (txn)->get_cc_manager())
     // only store timestamp which uniquely identifies a txn.
     // for NO_WAIT, store the txn_id
